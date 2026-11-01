@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { ReasonLine } from '../components/Badges'
 import Carousel from '../components/Carousel'
@@ -54,6 +54,8 @@ function Row({ title, children }) {
 
 export default function ForYou() {
   const { user, userId, model, recsVersion, watchlist } = useApp()
+  const [params] = useSearchParams()
+  const welcome = params.get('welcome') === '1'
   const none = () => Promise.resolve(null)
   const recs = useAsync(() => (userId ? api.recommendations(userId, model, 36) : none()), [userId, model, recsVersion])
   const rated = useAsync(() => (userId ? api.userRatings(userId) : none()), [userId, recsVersion])
@@ -93,8 +95,19 @@ export default function ForYou() {
         </div>
       </header>
 
+      {welcome && (
+        <div role="status" className="mt-6 flex flex-col gap-1 bg-accent px-6 py-5 text-bg">
+          <p className="label-caps">Welcome{user ? `, ${user.name}` : ''}!</p>
+          <p className="text-sm">
+            {rated.data
+              ? `We saved your ${rated.data.length} favourite${rated.data.length === 1 ? '' : 's'} (scroll down to "Your ratings"). Your picks below are built from them; rate a few more to sharpen them.`
+              : 'Saving your favourites…'}
+          </p>
+        </div>
+      )}
+
       {recs.data?.note && (
-        <p className="mt-6 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-xs text-ink">{recs.data.note}</p>
+        <p className="mt-6 border border-accent/30 bg-accent/10 px-4 py-2 text-xs text-ink">{recs.data.note}</p>
       )}
 
       <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">

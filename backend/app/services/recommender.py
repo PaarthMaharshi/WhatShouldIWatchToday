@@ -158,8 +158,9 @@ class RecommenderService:
              if x in genres]
         return {"type": "genre", "text": f"Popular with {g[0]} fans" if g else "Matches your picks"}
 
-    def mood(self, query: MoodQuery, k=12, ratings=None, ml_user_idx=None):
-        """Mood match (see ml/mood.py). Personalised when the user has enough ratings."""
+    def mood(self, query: MoodQuery, k=12, ratings=None, ml_user_idx=None, exclude=(), seed=None):
+        """Mood match (see ml/mood.py). Personalised when the user has enough
+        ratings; never returns rated movies or ids in `exclude` (already shown)."""
         eng = self.mood_engine
         personal, row = None, None
         if ratings:
@@ -171,6 +172,10 @@ class RecommenderService:
         scores = eng.score(query, personal)
         if row is not None:
             scores[row.indices] = -np.inf                 # skip what they've rated
+        shown = [self.index[m] for m in exclude if m in self.index]
+        scores[shown] = -np.inf                           # "show me different ones"
+        if seed is not None:
+            scores = eng.jitter(scores, seed)
 
         pool = np.argsort(-scores)[:150]
         pool = [i for i in pool if np.isfinite(scores[i])]
@@ -204,10 +209,14 @@ class RecommenderService:
         return {"mood": query.mood, "label": MOODS[query.mood]["label"],
                 "personalised": personal is not None, "items": cards}
 
-    def similar(self, movie_id, k=12):
+    def similar(self, movie_id, k=12, exclude=()):
+        """Related movies (Content-kNN), leaving out any movie ids in `exclude`."""
         if movie_id not in self.index:
             return []
-        top, sims = self.models["content"].similar(self.index[movie_id], k)
+        exclude = set(exclude)
+        top, sims = self.models["content"].similar(self.index[movie_id], k + len(exclude))
+        keep = [(i, s) for i, s in zip(top, sims) if int(self.item_ids[i]) not in exclude][:k]
+        top, sims = [i for i, _ in keep], [s for _, s in keep]
         cards = self.catalog.cards([self.item_ids[i] for i in top])
         for c, s in zip(cards, sims):
             c["similarity"] = round(float(s), 3)

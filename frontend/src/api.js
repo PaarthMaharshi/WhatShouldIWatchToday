@@ -22,7 +22,9 @@ async function request(path, options = {}) {
     } catch {
       /* body was not JSON */
     }
-    throw new Error(typeof detail === 'string' ? detail : res.statusText)
+    const err = new Error(typeof detail === 'string' ? detail : res.statusText)
+    err.status = res.status
+    throw err
   }
   return res.json()
 }
@@ -33,7 +35,7 @@ export const api = {
   genres: () => request('/genres'),
   movies: (params) => request('/movies' + qs(params)),
   movie: (id, userId) => request(`/movies/${id}` + qs({ user_id: userId })),
-  trending: (k = 20) => request('/trending' + qs({ k })),
+  trending: (k = 20, userId) => request('/trending' + qs({ k, user_id: userId })),
   recommendations: (userId, model = 'hybrid', k = 12) =>
     request(`/recommendations/${userId}` + qs({ model, k })),
   rate: (userId, movieId, rating, model = 'hybrid') =>

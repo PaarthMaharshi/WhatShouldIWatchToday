@@ -34,7 +34,11 @@ export function AppProvider({ children }) {
       setWatchlist(new Set())
       return
     }
-    api.user(userId).then(setUser).catch(() => setUserId(null))
+    // Only forget the profile if the server says it does not exist. Network
+    // errors and cold-start 5xx responses must not sign the user out.
+    api.user(userId).then(setUser).catch((err) => {
+      if (err.status === 404) setUserId(null)
+    })
     api.watchlist(userId).then((w) => setWatchlist(new Set(w.map((m) => m.id)))).catch(() => {})
   }, [userId, setUserId])
 

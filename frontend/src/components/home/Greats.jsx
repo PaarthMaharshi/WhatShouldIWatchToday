@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
+import { useApp } from '../../context'
 import { useAsync } from '../../hooks'
 import { genreLine, runtime, synopsis, toTen } from '../../format'
 import Artwork from '../Artwork'
@@ -33,7 +34,8 @@ function CastAvatars({ cast = [] }) {
 
 /** Big vertical title list; hovering or focusing a title updates the preview card. */
 export default function Greats() {
-  const list = useAsync(() => api.movies({ sort: 'popular', page_size: 7 }), [])
+  const { userId, recsVersion } = useApp()
+  const list = useAsync(() => api.movies({ sort: 'popular', page_size: 7, hide_rated_for: userId }), [userId, recsVersion])
   const [active, setActive] = useState(0)
   const movie = list.data?.items[active]
   const detail = useAsync(() => (movie ? api.movie(movie.id) : Promise.resolve(null)), [movie?.id])

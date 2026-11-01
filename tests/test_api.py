@@ -152,6 +152,33 @@ def test_mood_personalised_skips_rated(client, new_user):
     assert rated.isdisjoint(m["id"] for m in r["items"])
 
 
+def test_health_reports_database(client):
+    assert client.get("/health").json()["database"] in {"sqlite", "postgresql"}
+
+
+def test_suggestions_hide_rated_movies(client, new_user):
+    uid = new_user["id"]
+    rated = {m["id"] for m in client.get(f"/users/{uid}/ratings").json()}
+    assert 1 in rated                                   # Toy Story was an onboarding favourite
+    # Related movies for Toy Story 2: Toy Story appears for visitors, not for this user
+    anon = [m["id"] for m in client.get("/movies/3114").json()["similar"]]
+    mine = [m["id"] for m in client.get("/movies/3114", params={"user_id": uid}).json()["similar"]]
+    assert 1 in anon and rated.isdisjoint(mine) and len(mine) == 12
+    # Home lists and trending
+    popular = client.get("/movies", params={"sort": "popular", "page_size": 50,
+                                            "hide_rated_for": uid}).json()["items"]
+    assert rated.isdisjoint(m["id"] for m in popular)
+    trend = client.get("/trending", params={"k": 50, "user_id": uid}).json()
+    assert rated.isdisjoint(m["id"] for m in trend)
+
+
+def test_mood_show_different_ones(client, new_user):
+    body = {"mood": "happy", "user_id": new_user["id"], "k": 10, "seed": 1}
+    first = [m["id"] for m in client.post("/mood", json=body).json()["items"]]
+    second = [m["id"] for m in client.post("/mood", json={**body, "seed": 2, "exclude": first}).json()["items"]]
+    assert len(second) == 10 and set(first).isdisjoint(second)
+
+
 def test_mood_bad_input(client):
     assert client.post("/mood", json={"mood": "angry"}).status_code == 422
     assert client.post("/mood", json={"genres": ["Nope"]}).status_code == 422

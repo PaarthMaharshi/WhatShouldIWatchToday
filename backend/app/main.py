@@ -80,4 +80,7 @@ app.include_router(mood.router, prefix=PREFIX)
 
 @app.get(f"{PREFIX}/health")
 def health():
-    return {"status": "ok", "tmdb_key": bool(os.getenv("TMDB_API_KEY"))}
+    # "database" lets you confirm a deployment really uses the permanent
+    # PostgreSQL database (SQLite on a serverless host is wiped regularly).
+    return {"status": "ok", "tmdb_key": bool(os.getenv("TMDB_API_KEY")),
+            "database": "postgresql" if db.IS_POSTGRES else "sqlite"}

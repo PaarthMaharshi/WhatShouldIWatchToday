@@ -30,6 +30,8 @@ class MoodIn(BaseModel):
     text: str = Field("", max_length=120)
     user_id: int | None = None
     k: int = Field(12, ge=1, le=30)
+    exclude: list[int] = Field(default_factory=list, max_length=300)   # ids already shown
+    seed: int | None = None                                            # varies the picks
 
 
 class WatchlistIn(BaseModel):

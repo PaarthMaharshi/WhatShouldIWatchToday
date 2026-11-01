@@ -124,8 +124,10 @@ class Catalog:
 
     # --- Queries ---------------------------------------------------------------
     def search(self, q=None, genre=None, tag=None, min_rating=None, year_from=None,
-               year_to=None, sort="popular", page=1, page_size=24):
+               year_to=None, sort="popular", page=1, page_size=24, exclude=None):
         df = self.movies
+        if exclude:
+            df = df[~df.index.isin(list(exclude))]
         if q:
             df = df[df["clean_title"].str.contains(q, case=False, regex=False)]
         if genre:
@@ -147,5 +149,8 @@ class Catalog:
         return {"items": self.cards(ids), "total": total, "page": page,
                 "pages": int(np.ceil(total / page_size)) if total else 0}
 
-    def trending(self, k=20):
-        return self.cards(self.movies.sort_values("trend", ascending=False).index[:k])
+    def trending(self, k=20, exclude=None):
+        ranked = self.movies.sort_values("trend", ascending=False).index
+        if exclude:
+            ranked = ranked[~ranked.isin(list(exclude))]
+        return self.cards(ranked[:k])

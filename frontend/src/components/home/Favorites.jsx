@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../../api'
+import { useApp } from '../../context'
 import { useAsync } from '../../hooks'
 import PosterCard from '../PosterCard'
 import { ErrorNote, PosterSkeleton } from '../Skeletons'
@@ -41,11 +42,12 @@ export function ChipBar({ active, onChange, chips = CHIPS }) {
 
 /** Reference B "Favorites": filter chips above a poster grid. */
 export default function Favorites() {
+  const { userId, recsVersion } = useApp()
   const [active, setActive] = useState('top10')
   const chip = CHIPS.find((c) => c.key === active)
   const { data, loading, error, reload } = useAsync(
-    () => api.movies({ page_size: 10, ...chip.params }),
-    [active],
+    () => api.movies({ page_size: 10, ...chip.params, hide_rated_for: userId }),
+    [active, userId, recsVersion],
   )
 
   return (

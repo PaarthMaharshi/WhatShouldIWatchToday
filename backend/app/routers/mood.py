@@ -31,4 +31,4 @@ def recommend(body: MoodIn, request: Request):
         user = db.get_user(body.user_id)
         if user:
             ratings, ml_idx = db.get_ratings(body.user_id), user["ml_user_idx"]
-    return rec.mood(query, body.k, ratings, ml_idx)
+    return rec.mood(query, body.k, ratings, ml_idx, exclude=body.exclude, seed=body.seed)

@@ -37,7 +37,7 @@ export default function Welcome() {
     try {
       const user = await api.createUser({ name: name.trim(), genres, favorite_movie_ids: picks })
       signIn(user.id)
-      navigate('/')
+      navigate('/for-you?welcome=1')
     } catch (ex) {
       setErr(ex)
       setBusy(false)
@@ -50,7 +50,7 @@ export default function Welcome() {
     try {
       const user = await api.demoUser(Number(demoId))
       signIn(user.id)
-      navigate('/')
+      navigate('/for-you?welcome=1')
     } catch (ex) {
       setErr(ex)
       setBusy(false)

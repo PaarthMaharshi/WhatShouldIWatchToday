@@ -60,7 +60,10 @@ export default function Mood() {
   const toggleGenre = (g) =>
     setForm((f) => ({ ...f, genres: f.genres.includes(g) ? f.genres.filter((x) => x !== g) : [...f.genres, g] }))
 
-  const run = async (values = form) => {
+  // Ids already shown for the current query, so "Show me different ones" never repeats.
+  const [shown, setShown] = useState([])
+
+  const run = async (values = form, { more = false } = {}) => {
     setResult({ data: null, loading: true, error: null })
     const next = new URLSearchParams()
     Object.entries(values).forEach(([k, v]) => {
@@ -70,7 +73,15 @@ export default function Mood() {
     next.set('go', '1')
     setParams(next, { replace: true })
     try {
-      const data = await api.mood({ ...values, user_id: userId, k: 12 })
+      const data = await api.mood({
+        ...values,
+        user_id: userId,
+        k: 12,
+        exclude: more ? shown : [],
+        seed: Math.floor(Math.random() * 1e9),   // fresh mix of good matches each time
+      })
+      const ids = data.items.map((m) => m.id)
+      setShown(more ? [...shown, ...ids] : ids)
       setResult({ data, loading: false, error: null })
     } catch (error) {
       setResult({ data: null, loading: false, error })
@@ -187,8 +198,21 @@ export default function Mood() {
             {result.data ? `${result.data.label}: ${result.data.items.length} picks` : 'Finding films…'}
           </h2>
         )}
-        {result.data?.personalised && (
-          <p className="mt-1 text-xs text-muted">Blended with your taste profile; movies you have rated are left out.</p>
+        {result.data && (
+          <p className="mt-1 text-xs text-muted">
+            {userId
+              ? `Movies you have rated are left out${result.data.personalised ? '; blended with your taste profile' : ''}.`
+              : 'Sign in to leave out movies you have already seen.'}
+          </p>
+        )}
+        {result.data?.items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => run(form, { more: true })}
+            className="label-caps mt-4 border border-ink px-4 py-2 text-[10px] transition hover:bg-ink hover:text-bg"
+          >
+            Show me different ones ↻
+          </button>
         )}
         <div className="mt-6 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
           {result.loading && Array.from({ length: 12 }).map((_, i) => <PosterSkeleton key={i} />)}

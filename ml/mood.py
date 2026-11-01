@@ -193,7 +193,7 @@ class MoodRecommender:
         if q.discovery == "popular":
             score += 0.25 * self.log_pop
         elif q.discovery == "balanced":
-            score += 0.10 * self.log_pop
+            pass                                   # no popularity pull: avoids the same blockbusters
         else:
             score -= 0.20 * self.log_pop
 
@@ -217,7 +217,16 @@ class MoodRecommender:
             score[~(self.years <= hi)] = -np.inf
         return score
 
-    def diversify(self, candidates, scores, k, lam=0.65):
+    @staticmethod
+    def jitter(scores, seed, scale=0.035):
+        """Small seeded Gumbel noise so repeated searches surface different,
+        still well-matched films (a softmax-style sample from the top)."""
+        out = scores.copy()
+        finite = np.isfinite(out)
+        out[finite] += np.random.default_rng(seed).gumbel(0.0, scale, finite.sum())
+        return out
+
+    def diversify(self, candidates, scores, k, lam=0.55):
         """Maximal Marginal Relevance: trade a little score for variety."""
         candidates = list(candidates)
         if not candidates:
