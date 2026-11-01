@@ -19,9 +19,12 @@ export default function Carousel({
 
   const measure = () => {
     const el = track.current
-    if (!el) return
-    setPages(Math.max(1, Math.ceil(el.scrollWidth / el.clientWidth - 0.05)))
-    setPage(Math.round(el.scrollLeft / el.clientWidth))
+    // A hidden or not-yet-laid-out carousel measures 0px wide; dividing by it
+    // gives Infinity/NaN, which would crash the dots below.
+    if (!el || el.clientWidth <= 0) return
+    const n = Math.ceil(el.scrollWidth / el.clientWidth - 0.05)
+    setPages(Number.isFinite(n) ? Math.min(Math.max(1, n), 50) : 1)
+    setPage(Math.round(el.scrollLeft / el.clientWidth) || 0)
   }
 
   useEffect(() => {

@@ -1,17 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "npm --prefix frontend ci",
-  "buildCommand": "npm --prefix frontend run build",
-  "outputDirectory": "frontend/dist",
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{frontend/**,notebooks/**,tests/**,docs/**,data/**,.venv/**,**/__pycache__/**}"
+  "services": {
+    "api": {
+      "root": ".",
+      "framework": "fastapi",
+      "entrypoint": "api.index:app"
+    },
+    "web": {
+      "root": "frontend",
+      "framework": "vite",
+      "rewrites": [{ "source": "/((?!@)[^.]*)", "destination": "/index.html" }]
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
   ]
 }

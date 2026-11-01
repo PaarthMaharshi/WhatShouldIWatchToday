@@ -163,12 +163,19 @@ first start.
 
 ### 2a. Everything on Vercel (simplest)
 
-The repo is ready to import as-is: `vercel.json` builds `frontend/` and `api/index.py` runs the
-same FastAPI app as a Python function under `/api/*`, loading the committed `artifacts/` (no
-training on Vercel).
+The repo is a [Vercel Services](https://vercel.com/docs/services) project. `vercel.json`
+declares two services and routes public traffic to them:
+
+| Service | Folder | What it is | Public path |
+|---|---|---|---|
+| `api` | repo root | FastAPI app (`api/index.py`), loads the committed `artifacts/` | `/api/*` |
+| `web` | `frontend/` | Vite + React site (single-page app) | everything else |
+
+The browser calls the API on the same domain, so no service bindings are needed.
+Run both locally exactly as Vercel will with `vercel dev -L`.
 
 1. [vercel.com](https://vercel.com) -> **Add New -> Project** -> import this repo
-   (Root Directory = repo root).
+   (Root Directory = repo root; Vercel recognises the multi-service project).
 2. Environment variables: `DATABASE_URL` (from step 1), optionally `TMDB_API_KEY`.
 3. Deploy, then open `https://<your-app>.vercel.app/api/health`.
 
