@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../context'
-import { useDominantColor } from '../../hooks'
-import { hueFor, synopsis } from '../../format'
+import { synopsis } from '../../format'
 import Artwork from '../Artwork'
 import { GlobeIcon, PlayIcon, ShareIcon } from '../Icons'
 import { Counter, RevealText } from '../Motion'
@@ -15,13 +14,6 @@ const SECTIONS = [
   ['#cast', 'Cast & crew'],
   ['#related', 'Related'],
 ]
-
-/** Darkened "mood" colour: from the artwork, else a stable per-movie hue. */
-function useTint(movie) {
-  const rgb = useDominantColor(movie.backdrop || movie.poster)
-  if (rgb) return `rgb(${rgb.map((c) => Math.round(c * 0.55)).join(' ')})`
-  return `hsl(${hueFor(movie.id)} 45% 22%)`
-}
 
 function ShareLink({ title }) {
   const [copied, setCopied] = useState(false)
@@ -83,7 +75,6 @@ function InfoItem({ label, children }) {
  */
 export default function MovieHero({ movie: m, onPlay }) {
   const { motionOn } = useApp()
-  const tint = useTint(m)
   const cast = m.cast.slice(0, 4)
   const [castIdx, setCastIdx] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -99,28 +90,22 @@ export default function MovieHero({ movie: m, onPlay }) {
   const facts = [m.year, m.certification, m.runtime && `${m.runtime} min`].filter(Boolean)
 
   return (
-    <section className="relative overflow-hidden py-6 sm:py-8" aria-label={`${m.title} overview`}>
-      {/* Blurred, tinted copy of the backdrop behind the frame */}
-      <div className="absolute inset-0 -z-10" aria-hidden="true">
-        <Artwork movie={m} variant="backdrop" label={false} className="h-full w-full scale-110 opacity-60 blur-2xl" />
-        <div className="absolute inset-0 mix-blend-multiply" style={{ background: tint }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg" />
-      </div>
-
-      <div className="container-x">
+    <section className="relative py-6 sm:py-10" aria-label={`${m.title} overview`}>
+      <div className="container-x relative">
+        {/* Velvet block offset behind the frame (echoes the home hero) */}
+        <div aria-hidden="true" className="absolute -bottom-10 left-[22%] right-4 top-[45%] bg-accent sm:right-10" />
         <div
-          className="relative isolate grid overflow-hidden rounded-2xl border border-white/10 shadow-card lg:min-h-[620px] lg:grid-cols-[1fr_300px]"
+          className="relative isolate grid overflow-hidden shadow-card lg:min-h-[620px] lg:grid-cols-[1fr_300px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}
           onBlur={() => setPaused(false)}
         >
-          {/* Backdrop + mood tint inside the frame */}
+          {/* Velvet duotone: black-and-white backdrop washed in red velvet */}
           <div className="absolute inset-0 -z-10" aria-hidden="true">
-            <Artwork movie={m} variant="backdrop" eager label={false} className="h-full w-full" />
-            {/* "color" blend recolours the image in the mood tint without darkening it */}
-            <div className="absolute inset-0 opacity-70 mix-blend-color" style={{ background: tint }} />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+            <Artwork movie={m} variant="backdrop" eager label={false} className="ink-art h-full w-full" />
+            <div className="absolute inset-0 opacity-60 mix-blend-multiply" style={{ background: 'rgb(var(--accent))' }} />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#1a0609]/85 via-[#1a0609]/40 to-transparent" />
           </div>
 
           {/* Left: nav, title, synopsis, cast */}
@@ -167,7 +152,7 @@ export default function MovieHero({ movie: m, onPlay }) {
           </div>
 
           {/* Right: glass info column + trailer card */}
-          <aside className="relative flex flex-col border-t border-white/10 bg-black/30 text-white backdrop-blur-md lg:border-l lg:border-t-0">
+          <aside className="relative flex flex-col border-t border-white/10 bg-[#1a0609]/70 text-white lg:border-l lg:border-t-0">
             <div className="flex items-center justify-between border-b border-white/10 px-7 py-5">
               <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Find it on</span>
               <div className="flex items-center gap-4">

@@ -7,10 +7,10 @@ import { ErrorNote, PosterSkeleton } from '../components/Skeletons'
 import { useApp } from '../context'
 import { useAsync } from '../hooks'
 
-// One colour per mood for the tiles (decorative only).
+// One shade of the red velvet family per mood tile (decorative only).
 const MOOD_COLORS = {
-  happy: '#f59e0b', cry: '#3b82f6', thrill: '#E8403A', scared: '#7c3aed', think: '#14b8a6',
-  romantic: '#ec4899', adventure: '#f97316', nostalgic: '#a16207', chill: '#22c55e',
+  happy: '#E07A5F', cry: '#9E2A3A', thrill: '#C8102E', scared: '#4A0D17', think: '#7A1F2B',
+  romantic: '#D8577A', adventure: '#B23A2E', nostalgic: '#A3785C', chill: '#E3A7A0',
 }
 
 const DEFAULTS = { mood: 'happy', company: 'solo', era: 'any', runtime: 'any', discovery: 'balanced', text: '' }
@@ -138,7 +138,7 @@ export default function Mood() {
 
         {/* 2. Fine-tune */}
         {opts && (
-          <div className="grid gap-8 rounded-2xl border border-line bg-surface/70 p-6 backdrop-blur lg:grid-cols-2">
+          <div className="grid gap-8 border border-line bg-surface p-6 lg:grid-cols-2">
             <fieldset className="lg:col-span-2">
               <legend className="eyebrow mb-2">Genres (optional; {moodGenres.slice(0, 3).join(', ')} already suit this mood)</legend>
               <div className="flex flex-wrap gap-2">

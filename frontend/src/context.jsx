@@ -7,7 +7,8 @@ const AppContext = createContext(null)
 /** Global app state: current user, theme, chosen model, watchlist. */
 export function AppProvider({ children }) {
   const [userId, setUserId] = useStoredState('wsiwt.userId', null)
-  const [theme, setTheme] = useStoredState('wsiwt.theme', 'dark')
+  // Cream ("red velvet") is the default look; "velvet night" is the dark option.
+  const [theme, setTheme] = useStoredState('wsiwt.theme.v2', 'light')
   const [model, setModel] = useStoredState('wsiwt.model', 'hybrid')
   // Animations default to off for people who ask their OS for reduced motion.
   const [motionOn, setMotionOn] = useStoredState(

@@ -6,6 +6,7 @@ import { genreLine, runtime, synopsis, toTen } from '../../format'
 import Artwork from '../Artwork'
 import { PlayBadge } from '../Badges'
 import { ErrorNote } from '../Skeletons'
+import { FloatHeading } from '../Motion'
 
 function CastAvatars({ cast = [] }) {
   if (!cast.length) return null
@@ -40,8 +41,8 @@ export default function Greats() {
   if (list.error) return <div className="container-x mt-24"><ErrorNote error={list.error} onRetry={list.reload} /></div>
 
   return (
-    <section className="container-x mt-24" aria-labelledby="greats-title">
-      <h2 id="greats-title" className="text-3xl font-bold">Most watched</h2>
+    <section className="container-x mt-24" aria-label="Most watched">
+      <FloatHeading className="!text-left !text-4xl !font-black uppercase sm:!text-6xl">Most watched</FloatHeading>
       <p className="mt-3 text-sm text-muted">The films MovieLens viewers rated most often. Hover a title to preview it.</p>
       <div className="mt-8 grid gap-10 md:grid-cols-[1.3fr_1fr]">
         <ol className="space-y-3">

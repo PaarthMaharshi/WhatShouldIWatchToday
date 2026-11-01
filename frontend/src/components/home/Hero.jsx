@@ -1,22 +1,45 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { genreLine, runtime, synopsis } from '../../format'
+import { AnimatePresence, motion } from 'motion/react'
+import { useApp } from '../../context'
 import Artwork from '../Artwork'
-import { BigRating, MatchBadge, ReasonLine } from '../Badges'
-import { ArrowLeft, ArrowRight, PlayIcon } from '../Icons'
+import { ReasonLine } from '../Badges'
+import { ChevronRight } from '../Icons'
 import { HeroSkeleton } from '../Skeletons'
-import { RevealText } from '../Motion'
 import TrailerModal from '../TrailerModal'
 
-/** Reference B hero: featured movie inside a faint circle, arrows either side. */
+const SLIDE_MS = 7000
+const EASE = [0.22, 1, 0.36, 1]
+
+/** Title size steps down for long titles so they stay on 2-3 lines. */
+const titleSize = (t) =>
+  t.length <= 12 ? 'text-[clamp(3rem,7.5vw,6.5rem)]'
+    : t.length <= 24 ? 'text-[clamp(2.4rem,5.2vw,4.75rem)]'
+      : 'text-[clamp(2rem,4vw,3.5rem)]'
+
+/**
+ * Editorial home hero after the reference design: huge uppercase title, accent
+ * subtitle, stacked tagline, small links and a big score number on the left;
+ * the film's image in black-and-white "ink" over a velvet colour block on the
+ * right; numbered pagination with an autoplay progress line and a square next
+ * button underneath.
+ */
 export default function Hero({ items, eyebrow, loading }) {
+  const { motionOn } = useApp()
   const [i, setI] = useState(0)
+  const [paused, setPaused] = useState(false)
   const [trailer, setTrailer] = useState(false)
 
   const firstId = items?.[0]?.id
   useEffect(() => setI(0), [firstId])
+  const count = items?.length ?? 0
+  useEffect(() => {
+    if (!motionOn || paused || count < 2) return undefined
+    const t = setTimeout(() => setI((x) => (x + 1) % count), SLIDE_MS)
+    return () => clearTimeout(t)
+  }, [i, motionOn, paused, count])
 
-  if (loading || !items?.length) {
+  if (loading || !count) {
     return (
       <section className="container-x py-10">
         <HeroSkeleton />
@@ -24,77 +47,116 @@ export default function Hero({ items, eyebrow, loading }) {
     )
   }
   const m = items[i]
-  const go = (d) => setI((i + d + items.length) % items.length)
+  const next = () => setI((i + 1) % count)
+  const score = m.rating != null ? String(Math.round(m.rating * 20)).padStart(3, '0') : '—'
+  const tagline = [...eyebrow.split(' '), m.year].filter(Boolean)
+  const anim = (props) => (motionOn ? props : {})
 
   return (
-    <section className="relative overflow-hidden" aria-roledescription="carousel" aria-label="Featured movies">
-      <div className="container-x relative py-10 md:py-16">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[680px] w-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-line/70 md:block"
-        />
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          aria-label="Previous featured movie"
-          className="absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 p-2 text-ink/80 hover:text-accent lg:block"
-        >
-          <ArrowLeft />
-        </button>
-        <button
-          type="button"
-          onClick={() => go(1)}
-          aria-label="Next featured movie"
-          className="absolute right-0 top-1/2 z-20 hidden -translate-y-1/2 p-2 text-ink/80 hover:text-accent lg:block"
-        >
-          <ArrowRight />
-        </button>
+    <section
+      className="relative"
+      aria-roledescription="carousel"
+      aria-label="Featured movies"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      <div className="container-x grid min-h-[calc(100svh-5rem)] grid-rows-[1fr_auto]">
+        <div className="grid items-center gap-12 pt-6 lg:grid-cols-[0.9fr_1.35fr] lg:gap-6">
+          {/* Left: words */}
+          <div className="relative z-10 lg:pl-12">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={m.id}
+                {...anim({
+                  initial: { opacity: 0, y: 36 },
+                  animate: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
+                  exit: { opacity: 0, y: -20, transition: { duration: 0.25 } },
+                })}
+              >
+                <h1 className={`text-balance font-display font-black uppercase leading-[0.92] tracking-tight ${titleSize(m.title)}`}>
+                  <Link to={`/movie/${m.id}`} className="hover:text-accent">{m.title}</Link>
+                </h1>
+                <p className="label-caps mt-7 text-sm text-accent">
+                  {m.genres.slice(0, 3).join(' · ') || 'Feature film'}
+                </p>
+                <p className="mt-8 font-display text-[13px] font-extrabold uppercase leading-[1.15]">
+                  {tagline.map((w) => <span key={w} className="block">{w}</span>)}
+                </p>
+                <ReasonLine reason={m.reason} className="mt-4 max-w-xs" />
+              </motion.div>
+            </AnimatePresence>
 
-        <div className="relative grid items-center gap-8 md:grid-cols-[1fr_1.35fr] lg:px-12" aria-live="polite">
-          <div className="relative z-10 md:-mr-28">
-            <p className="eyebrow normal-case tracking-normal">
-              <span className="uppercase tracking-[0.2em] text-accent">{eyebrow}</span>
-              <span className="mx-2" aria-hidden="true">·</span>
-              {genreLine(m)}
-            </p>
-            <RevealText as="h1" text={m.title} className="mt-3 text-4xl font-bold leading-[1.1] drop-shadow-lg sm:text-5xl" />
-            <div className="mt-4 flex items-center gap-4">
-              <BigRating rating={m.rating} />
-              <MatchBadge match={m.match} />
+            <div className="label-caps mt-12 flex gap-7 text-[10px] text-muted">
+              <Link to={`/movie/${m.id}`} className="hover:text-accent">Details</Link>
+              <button type="button" onClick={() => setTrailer(true)} className="uppercase tracking-[inherit] hover:text-accent">Trailer</button>
+              <Link to="/mood" className="hover:text-accent">Mood match</Link>
             </div>
-            <Link to={`/movie/${m.id}`} className="link-underline mt-5">Watch Now</Link>
-            <ReasonLine reason={m.reason} className="mt-4" />
+            <p className="mt-10 flex items-baseline gap-2 font-display text-2xl font-bold tabular-nums">
+              {score}
+              <span className="label-caps text-[9px] text-muted">/100 viewer score</span>
+            </p>
           </div>
 
-          <Link to={`/movie/${m.id}`} className="relative block" aria-label={`Open ${m.title}`}>
-            <Artwork movie={m} variant="backdrop" eager className="aspect-[16/10] w-full rounded-sm shadow-card" />
-          </Link>
-        </div>
-
-        <div className="relative mt-8 grid items-center gap-6 md:grid-cols-[1fr_1fr] lg:px-12">
-          <p className="max-w-md text-sm leading-relaxed text-muted md:ml-12">{synopsis(m)}</p>
-          <button type="button" onClick={() => setTrailer(true)} className="group flex items-center gap-4 justify-self-start md:justify-self-center">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-accent text-white shadow-lg shadow-accent/30 transition group-hover:scale-105">
-              <PlayIcon width={22} height={22} />
-            </span>
-            <span className="text-left">
-              <span className="block font-display text-sm font-semibold">Watch Trailer</span>
-              <span className="text-[11px] text-muted">{runtime(m.runtime) || 'Trailer via TMDB'}</span>
-            </span>
-          </button>
-        </div>
-
-        <div className="mt-8 flex justify-center gap-2">
-          {items.map((it, k) => (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => setI(k)}
-              aria-label={`Show ${it.title}`}
-              aria-current={k === i}
-              className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-accent' : 'w-1.5 bg-muted/40 hover:bg-muted'}`}
+          {/* Right: ink art over a velvet block */}
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-10 left-[12%] right-[18%] top-[58%] bg-accent sm:-bottom-[24vh] lg:-bottom-[34vh]"
             />
-          ))}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={m.id}
+                className="relative z-10"
+                {...anim({
+                  initial: { opacity: 0, x: 60 },
+                  animate: { opacity: 1, x: 0, transition: { duration: 0.7, ease: EASE } },
+                  exit: { opacity: 0, x: -40, transition: { duration: 0.25 } },
+                })}
+              >
+                <Link to={`/movie/${m.id}`} aria-label={`Open ${m.title}`} className="block">
+                  <Artwork movie={m} variant="backdrop" eager label={false} className="ink-art aspect-[16/10] w-full shadow-card" />
+                </Link>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Pagination row: 01 ——— 02 03 04 05   [>] */}
+        <div className="relative z-10 flex items-center justify-between gap-6 py-8 lg:pl-12">
+          <ol className="flex items-center gap-4 font-display text-xs font-semibold tabular-nums">
+            {items.map((it, k) => (
+              <li key={it.id} className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setI(k)}
+                  aria-label={`Show ${it.title}`}
+                  aria-current={k === i}
+                  className={k === i ? 'text-ink' : 'text-muted hover:text-ink'}
+                >
+                  {String(k + 1).padStart(2, '0')}
+                </button>
+                {k === i && (
+                  <span className="relative block h-px w-16 bg-line sm:w-32" aria-hidden="true">
+                    <span
+                      key={`${it.id}-${paused}`}
+                      className="absolute inset-0 origin-left bg-accent"
+                      style={motionOn && !paused ? { animation: `progress ${SLIDE_MS}ms linear both` } : undefined}
+                    />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            onClick={next}
+            aria-label="Next featured movie"
+            className="grid h-10 w-10 place-items-center bg-ink text-bg transition hover:bg-accent"
+          >
+            <ChevronRight width={18} height={18} />
+          </button>
         </div>
       </div>
       {trailer && <TrailerModal youtubeKey={m.trailer_youtube} title={m.title} onClose={() => setTrailer(false)} />}

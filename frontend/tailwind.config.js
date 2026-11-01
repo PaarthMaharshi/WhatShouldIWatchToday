@@ -15,11 +15,13 @@ export default {
         ink: v('ink'),
         muted: v('muted'),
         line: v('line'),
-        accent: { DEFAULT: '#E8403A', dark: '#c9302b' },
+        // Red velvet: deep velvet red on cream (brighter crimson in the dark theme)
+        accent: { DEFAULT: v('accent'), dark: v('accent-dark'), soft: v('accent-soft') },
       },
       fontFamily: {
         display: ['Montserrat', 'system-ui', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        script: ['"Kaushan Script"', 'cursive'],
       },
       boxShadow: {
         card: '0 18px 40px -18px rgb(0 0 0 / 0.55)',

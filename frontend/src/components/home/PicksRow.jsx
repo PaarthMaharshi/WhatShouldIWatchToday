@@ -4,6 +4,7 @@ import Artwork from '../Artwork'
 import { MatchBadge, PlayBadge, RatingPill, ReasonLine } from '../Badges'
 import Carousel from '../Carousel'
 import { CardSkeleton, ErrorNote } from '../Skeletons'
+import { FloatHeading } from '../Motion'
 
 // Vertical offsets that give Reference B's staggered "Editors choice" look.
 const STAGGER = ['md:mt-14', 'md:mt-0', 'md:mt-8', 'md:mt-2']
@@ -32,10 +33,10 @@ function PickCard({ movie, index }) {
 /** "Top picks for you" row, filled by the selected model (hybrid by default). */
 export default function PicksRow({ title, subtitle, data, loading, error, onRetry }) {
   return (
-    <section className="container-x mt-16" aria-labelledby="picks-title">
+    <section className="container-x mt-16" aria-label={title}>
       <div className="flex items-end justify-between gap-6">
         <div className="max-w-md">
-          <h2 id="picks-title" className="text-3xl font-bold">{title}</h2>
+          <FloatHeading className="!text-left !text-4xl !font-black uppercase sm:!text-6xl">{title}</FloatHeading>
           <p className="mt-3 text-sm text-muted">{subtitle}</p>
         </div>
         <div className="hidden h-px flex-1 bg-line md:block" aria-hidden="true" />

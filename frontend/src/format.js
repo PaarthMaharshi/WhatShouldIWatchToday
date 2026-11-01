@@ -23,4 +23,5 @@ export const synopsis = (m) => {
 }
 
 /** Deterministic hue per movie, used for placeholder art when TMDB is absent. */
-export const hueFor = (id) => (Number(id) * 47) % 360
+// Kept within reds / burgundies (hue 340-20) to stay on the red velvet palette.
+export const hueFor = (id) => (340 + ((Number(id) * 7) % 40)) % 360

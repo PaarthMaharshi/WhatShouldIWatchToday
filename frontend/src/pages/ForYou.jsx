@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { ReasonLine } from '../components/Badges'
 import Carousel from '../components/Carousel'
+import { Reveal } from '../components/Motion'
 import ModelSwitcher from '../components/ModelSwitcher'
 import PosterCard from '../components/PosterCard'
 import { ErrorNote, PosterSkeleton } from '../components/Skeletons'
@@ -38,14 +39,16 @@ function becauseGroups(items, min = 2, max = 3) {
 
 function Row({ title, children }) {
   return (
-    <section className="mt-16">
-      <h2 className="text-2xl font-bold">{title}</h2>
-      <div className="mt-6">
-        <Carousel label={typeof title === 'string' ? title : 'Movies'} arrowClass="border-line bg-bg text-ink hover:border-accent">
-          {children}
-        </Carousel>
-      </div>
-    </section>
+    <Reveal>
+      <section className="mt-16">
+        <h2 className="font-display text-2xl font-black uppercase tracking-tight">{title}</h2>
+        <div className="mt-6">
+          <Carousel label={typeof title === 'string' ? title : 'Movies'} arrowClass="border-line bg-bg text-ink hover:border-accent">
+            {children}
+          </Carousel>
+        </div>
+      </section>
+    </Reveal>
   )
 }
 

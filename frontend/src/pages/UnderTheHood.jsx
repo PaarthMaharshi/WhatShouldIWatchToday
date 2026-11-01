@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import Artwork from '../components/Artwork'
 import { MatchBadge } from '../components/Badges'
-import { Counter, Spotlight } from '../components/Motion'
+import { Counter, Reveal, Spotlight } from '../components/Motion'
 import { ErrorNote } from '../components/Skeletons'
 import { useApp } from '../context'
 import { useAsync, useModels } from '../hooks'
@@ -181,11 +181,13 @@ function ColdTable({ title, data }) {
 
 function Section({ id, title, intro, children }) {
   return (
-    <section className="mt-16" aria-labelledby={id}>
-      <h2 id={id} className="text-2xl font-bold">{title}</h2>
-      {intro && <p className="mt-2 max-w-3xl text-sm text-muted">{intro}</p>}
-      <div className="mt-6">{children}</div>
-    </section>
+    <Reveal>
+      <section className="mt-20" aria-labelledby={id}>
+        <h2 id={id} className="font-display text-3xl font-black uppercase tracking-tight sm:text-4xl">{title}</h2>
+        {intro && <p className="mt-2 max-w-3xl text-sm text-muted">{intro}</p>}
+        <div className="mt-6">{children}</div>
+      </section>
+    </Reveal>
   )
 }
 

@@ -5,6 +5,7 @@ import Artwork from '../components/Artwork'
 import DetailTabs from '../components/detail/DetailTabs'
 import MovieHero from '../components/detail/MovieHero'
 import RelatedMovies from '../components/detail/RelatedMovies'
+import { Reveal } from '../components/Motion'
 import { BookmarkButton } from '../components/PosterCard'
 import { ErrorNote } from '../components/Skeletons'
 import StarRating from '../components/StarRating'
@@ -69,7 +70,8 @@ export default function MovieDetail() {
       <MovieHero movie={m} onPlay={() => setTrailer(true)} />
 
       {/* Poster | credits + plot + your rating | info tabs */}
-      <section id="about" className="container-x mt-12 grid scroll-mt-24 gap-10 md:grid-cols-[200px_1fr] lg:grid-cols-[220px_1fr_1.25fr]">
+      <Reveal>
+      <section id="about" className="container-x mt-20 grid scroll-mt-24 gap-10 md:grid-cols-[200px_1fr] lg:grid-cols-[220px_1fr_1.25fr]">
         <h2 className="sr-only">About {m.title}</h2>
         <Artwork movie={m} className="mx-auto aspect-[2/3] w-48 rounded-lg shadow-card md:w-full" />
 
@@ -106,17 +108,20 @@ export default function MovieDetail() {
           <DetailTabs movie={m} onPlay={() => setTrailer(true)} />
         </div>
       </section>
+      </Reveal>
 
       {quote && (
-        <figure className="mt-16 bg-surface/80 py-10 text-center backdrop-blur">
+        <figure className="mt-16 bg-surface py-10 text-center">
           <blockquote className="container-x font-serif text-xl italic text-muted sm:text-2xl">“{quote.text}”</blockquote>
           <figcaption className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em]">{quote.by}</figcaption>
         </figure>
       )}
 
-      <div id="related" className={`scroll-mt-24 ${quote ? '' : 'mt-16'}`}>
-        <RelatedMovies movies={m.similar} />
-      </div>
+      <Reveal distance={40}>
+        <div id="related" className={`scroll-mt-24 ${quote ? '' : 'mt-16'}`}>
+          <RelatedMovies movies={m.similar} />
+        </div>
+      </Reveal>
 
       {trailer && <TrailerModal youtubeKey={m.trailer_youtube} title={m.title} onClose={() => setTrailer(false)} />}
     </article>

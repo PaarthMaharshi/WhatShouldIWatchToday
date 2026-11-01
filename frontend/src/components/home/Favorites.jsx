@@ -3,6 +3,7 @@ import { api } from '../../api'
 import { useAsync } from '../../hooks'
 import PosterCard from '../PosterCard'
 import { ErrorNote, PosterSkeleton } from '../Skeletons'
+import { FloatHeading } from '../Motion'
 
 // Filter chips -> /movies query parameters. Ratings are MovieLens averages
 // (out of 5), shown in the UI out of 10, so "8.0+" means an average >= 4.0.
@@ -48,8 +49,8 @@ export default function Favorites() {
   )
 
   return (
-    <section className="container-x mt-24" aria-labelledby="fav-title">
-      <h2 id="fav-title" className="text-3xl font-bold">Favorites</h2>
+    <section className="container-x mt-24" aria-label="Favorites">
+      <FloatHeading className="!text-left !text-4xl !font-black uppercase sm:!text-6xl">Favorites</FloatHeading>
       <p className="mt-3 max-w-md text-sm text-muted">The best films of the catalogue according to MovieLens viewers.</p>
       <div className="mt-6">
         <ChipBar active={active} onChange={setActive} />

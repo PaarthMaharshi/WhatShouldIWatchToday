@@ -2,24 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme tokens (RGB triplets so Tailwind can apply opacity). Light theme takes
-   Reference A's editorial palette, dark takes Reference B's charcoal. */
+/* Red velvet theme tokens (RGB triplets so Tailwind can apply opacity).
+   Light "cream" is the default; "velvet night" is the dark variant. */
 :root {
-  --bg: 255 255 255;
-  --surface: 243 243 244;
-  --surface-2: 232 232 235;
-  --ink: 22 22 24;
-  --muted: 104 106 116;
-  --line: 222 222 226;
+  --bg: 246 239 229;          /* cream */
+  --surface: 238 228 214;     /* frosting */
+  --surface-2: 228 214 197;
+  --ink: 33 13 17;            /* near-black burgundy */
+  --muted: 112 82 82;
+  --line: 222 205 188;
+  --accent: 164 22 38;        /* red velvet */
+  --accent-dark: 122 14 28;
+  --accent-soft: 232 196 186; /* blush */
   color-scheme: light;
 }
 .dark {
-  --bg: 28 29 34;
-  --surface: 36 37 43;
-  --surface-2: 46 47 55;
-  --ink: 238 238 240;
-  --muted: 150 153 163;
-  --line: 58 60 68;
+  --bg: 24 9 12;              /* velvet night */
+  --surface: 38 15 20;
+  --surface-2: 54 22 28;
+  --ink: 246 236 224;         /* cream text */
+  --muted: 199 166 160;
+  --line: 72 34 41;
+  --accent: 214 44 62;        /* brighter crimson for contrast on dark */
+  --accent-dark: 170 26 44;
+  --accent-soft: 92 30 40;
   color-scheme: dark;
 }
 
@@ -33,6 +39,9 @@
   :focus-visible {
     @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
   }
+  ::selection {
+    @apply bg-accent text-bg;
+  }
 }
 
 @layer components {
@@ -41,6 +50,10 @@
   }
   .eyebrow {
     @apply font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-muted;
+  }
+  /* Small uppercase editorial label (like the reference's nav and side text) */
+  .label-caps {
+    @apply font-display text-[11px] font-bold uppercase tracking-[0.18em];
   }
   .link-underline {
     @apply relative inline-block pb-1 font-display text-sm font-semibold text-ink
@@ -52,7 +65,7 @@
       text-muted transition hover:border-accent/60 hover:text-ink;
   }
   .chip-on {
-    @apply border-accent bg-accent text-white hover:text-white;
+    @apply border-accent bg-accent text-bg hover:text-bg;
   }
   .skeleton {
     @apply animate-pulse rounded-lg bg-surface-2;
@@ -63,60 +76,24 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+  /* Black-and-white "ink" treatment for hero art, like the reference's line drawing */
+  .ink-art {
+    filter: grayscale(1) contrast(1.12) brightness(1.03);
+    transition: filter 0.6s ease;
+  }
+  .ink-art:hover {
+    filter: grayscale(0.15) contrast(1.05);
+  }
 }
 
-/* ---- Cinematic animated background (inspired by dotted-grid + drifting
-   shapes + twinkles; recoloured as stage lights for a movie site) ---- */
-:root {
-  --glow-1: 232 64 58;   /* accent red */
-  --glow-2: 236 72 153;  /* rose */
-  --glow-3: 251 146 60;  /* warm amber */
-  --dot: 22 22 24;
-  --glow-alpha: 0.18;
-}
-.dark {
-  --glow-1: 232 64 58;
-  --glow-2: 109 40 217;  /* deep violet */
-  --glow-3: 13 148 136;  /* teal */
-  --dot: 255 255 255;
-  --glow-alpha: 0.22;
-}
-.cinema-dots {
-  background-image: radial-gradient(rgb(var(--dot) / 0.07) 1px, transparent 1.6px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 85%);
-}
-.cinema-glow {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(90px);
-  will-change: transform;
-}
-.cinema-glow.a { width: 46vw; height: 46vw; left: -12vw; top: -14vw; background: rgb(var(--glow-1) / var(--glow-alpha)); animation: drift-a 26s ease-in-out infinite alternate; }
-.cinema-glow.b { width: 40vw; height: 40vw; right: -14vw; top: 22vh; background: rgb(var(--glow-2) / var(--glow-alpha)); animation: drift-b 32s ease-in-out infinite alternate; }
-.cinema-glow.c { width: 34vw; height: 34vw; left: 30vw; bottom: -18vw; background: rgb(var(--glow-3) / calc(var(--glow-alpha) * 0.8)); animation: drift-c 38s ease-in-out infinite alternate; }
-@keyframes drift-a { to { transform: translate(14vw, 10vh) scale(1.15); } }
-@keyframes drift-b { to { transform: translate(-12vw, -8vh) scale(0.9); } }
-@keyframes drift-c { to { transform: translate(-8vw, -14vh) scale(1.2); } }
-.cinema-twinkle { animation: twinkle 3.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-@keyframes twinkle {
-  0%, 100% { opacity: 0.15; transform: scale(0.6) rotate(0deg); }
-  50% { opacity: 0.9; transform: scale(1) rotate(45deg); }
-}
-.cinema-grain {
-  opacity: 0.06;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
-
-/* Animations toggle (navbar) and the OS reduced-motion setting both stop the
-   decorative motion; essential transitions stay. */
-.motion-off .cinema-glow,
-.motion-off .cinema-twinkle,
-.motion-off .animate-pulse-soft { animation: none !important; }
+@keyframes progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
