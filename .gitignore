@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets
+.env
+
+# Generated data (re-create with ml.download / ml.data / ml.tmdb)
+data/raw/
+data/processed/
+data/cache/
+data/app.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Local tooling
+.claude/
+.vercel/
+
+# NOTE: artifacts/ (trained models, catalog bundle, results, plots) IS committed:
+# the deployed API loads it instead of retraining.
+
+# Noisy local training log
+artifacts/train_log.txt

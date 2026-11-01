@@ -1,0 +1,12 @@
+# Runtime dependencies of the API (this is what Vercel installs).
+# For training, notebooks and tests use: pip install -r requirements-dev.txt
+numpy==2.1.3
+pandas==2.2.3
+scipy==1.14.1
+scikit-learn==1.6.1
+joblib==1.4.2
+requests==2.32.3
+python-dotenv==1.0.1
+fastapi==0.115.5
+pydantic==2.10.2
+uvicorn==0.32.1

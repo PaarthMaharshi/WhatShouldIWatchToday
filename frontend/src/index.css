@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens (RGB triplets so Tailwind can apply opacity). Light theme takes
+   Reference A's editorial palette, dark takes Reference B's charcoal. */
+:root {
+  --bg: 255 255 255;
+  --surface: 243 243 244;
+  --surface-2: 232 232 235;
+  --ink: 22 22 24;
+  --muted: 104 106 116;
+  --line: 222 222 226;
+  color-scheme: light;
+}
+.dark {
+  --bg: 28 29 34;
+  --surface: 36 37 43;
+  --surface-2: 46 47 55;
+  --ink: 238 238 240;
+  --muted: 150 153 163;
+  --line: 58 60 68;
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10;
+  }
+  .eyebrow {
+    @apply font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-muted;
+  }
+  .link-underline {
+    @apply relative inline-block pb-1 font-display text-sm font-semibold text-ink
+      after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded
+      after:bg-accent after:transition-transform hover:after:scale-x-110;
+  }
+  .chip {
+    @apply rounded-full border border-line bg-surface px-4 py-1.5 text-xs font-medium
+      text-muted transition hover:border-accent/60 hover:text-ink;
+  }
+  .chip-on {
+    @apply border-accent bg-accent text-white hover:text-white;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-2;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

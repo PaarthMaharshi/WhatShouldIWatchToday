@@ -1,0 +1,36 @@
+{
+  "knn": {
+    "item_knn": {
+      "k": 80,
+      "shrink": 10
+    },
+    "user_knn": {
+      "k": 100,
+      "shrink": 5
+    },
+    "content": {
+      "k": 100
+    }
+  },
+  "supervised": {
+    "Linear regression|reg": {},
+    "Logistic regression|clf": {
+      "m__C": 1
+    },
+    "Logistic regression (from scratch)|clf": {},
+    "Decision tree|reg": {
+      "m__max_depth": 6,
+      "m__min_samples_leaf": 100
+    },
+    "Decision tree|clf": {
+      "m__max_depth": 6,
+      "m__min_samples_leaf": 100
+    },
+    "SVM|reg": {
+      "m__C": 0.5
+    },
+    "SVM|clf": {
+      "m__C": 0.1
+    }
+  }
+}
