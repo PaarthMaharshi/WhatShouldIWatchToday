@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/browse', label: 'Browse' },
   { to: '/for-you', label: 'For you' },
   { to: '/mood', label: 'Mood' },
+  { to: '/forum', label: 'Forum' },
   { to: '/under-the-hood', label: 'Under the hood' },
 ]
 

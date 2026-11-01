@@ -179,6 +179,62 @@ def test_mood_show_different_ones(client, new_user):
     assert len(second) == 10 and set(first).isdisjoint(second)
 
 
+def test_forum_post_comment_vote_flow(client, new_user):
+    uid = new_user["id"]
+    other = client.post("/users", json={"name": "Ravi"}).json()
+    CREATED.append(other["id"])
+
+    p = client.post("/forum/posts", json={"user_id": uid, "title": "Best Pixar film?",
+                                          "body": "Toy Story or Up?", "flair": "question",
+                                          "movie_id": 1})
+    assert p.status_code == 201
+    post = p.json()
+    assert post["author"] == "Asha" and post["movie"]["title"] == "Toy Story" and post["score"] == 0
+
+    # Listing, filters and search
+    listing = client.get("/forum/posts", params={"sort": "new"}).json()
+    assert post["id"] in [x["id"] for x in listing["items"]]
+    assert all(x["flair"] == "question" for x in client.get("/forum/posts", params={"flair": "question"}).json()["items"])
+    assert [x["id"] for x in client.get("/forum/posts", params={"movie_id": 1}).json()["items"]] == [post["id"]]
+    assert client.get("/forum/posts", params={"q": "pixar"}).json()["total"] >= 1
+
+    # Comment + threaded reply
+    c1 = client.post(f"/forum/posts/{post['id']}/comments", json={"user_id": other["id"], "body": "Up, easily."}).json()
+    client.post(f"/forum/posts/{post['id']}/comments",
+                json={"user_id": uid, "body": "Bold take!", "parent_id": c1["id"]})
+    full = client.get(f"/forum/posts/{post['id']}").json()
+    assert full["comment_count"] == 2
+    assert [c["parent_id"] for c in full["comments"]] == [None, c1["id"]]
+
+    # Votes: up, change to down, remove; my_vote reported per viewer
+    assert client.post("/forum/vote", json={"user_id": other["id"], "target_type": "post",
+                                            "target_id": post["id"], "value": 1}).json()["score"] == 1
+    assert client.post("/forum/vote", json={"user_id": uid, "target_type": "post",
+                                            "target_id": post["id"], "value": 1}).json()["score"] == 2
+    assert client.post("/forum/vote", json={"user_id": uid, "target_type": "post",
+                                            "target_id": post["id"], "value": -1}).json()["score"] == 0
+    assert client.get(f"/forum/posts/{post['id']}", params={"user_id": uid}).json()["my_vote"] == -1
+    assert client.post("/forum/vote", json={"user_id": uid, "target_type": "comment",
+                                            "target_id": c1["id"], "value": 1}).json()["score"] == 1
+
+    # Only the author may delete
+    assert client.delete(f"/forum/posts/{post['id']}", params={"user_id": other["id"]}).status_code == 403
+    assert client.delete(f"/forum/comments/{c1['id']}", params={"user_id": other["id"]}).status_code == 200
+    assert client.get(f"/forum/posts/{post['id']}").json()["comments"][0]["body"] == "[deleted]"
+    assert client.delete(f"/forum/posts/{post['id']}", params={"user_id": uid}).status_code == 200
+    assert client.get(f"/forum/posts/{post['id']}").status_code == 404
+
+
+def test_forum_validation(client, new_user):
+    uid = new_user["id"]
+    assert client.post("/forum/posts", json={"user_id": uid, "title": "Hi"}).status_code == 422
+    assert client.post("/forum/posts", json={"user_id": uid, "title": "Valid title", "flair": "meme"}).status_code == 422
+    assert client.post("/forum/posts", json={"user_id": 999999, "title": "Valid title"}).status_code == 404
+    assert client.post("/forum/vote", json={"user_id": uid, "target_type": "post",
+                                            "target_id": 999999, "value": 1}).status_code == 404
+    assert client.get("/forum/posts", params={"sort": "random"}).status_code == 422
+
+
 def test_mood_bad_input(client):
     assert client.post("/mood", json={"mood": "angry"}).status_code == 422
     assert client.post("/mood", json={"genres": ["Nope"]}).status_code == 422

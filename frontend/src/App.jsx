@@ -9,6 +9,8 @@ import { useApp } from './context'
 import Browse from './pages/Browse'
 import ComingSoon from './pages/ComingSoon'
 import ForYou from './pages/ForYou'
+import Forum from './pages/Forum'
+import ForumPost from './pages/ForumPost'
 import Home from './pages/Home'
 import Mood from './pages/Mood'
 import MovieDetail from './pages/MovieDetail'
@@ -62,6 +64,8 @@ const ROUTES = (
     <Route path="/browse" element={<Browse />} />
     <Route path="/for-you" element={<ForYou />} />
     <Route path="/mood" element={<Mood />} />
+    <Route path="/forum" element={<Forum />} />
+    <Route path="/forum/:id" element={<ForumPost />} />
     <Route path="/movie/:id" element={<MovieDetail />} />
     <Route path="/under-the-hood" element={<UnderTheHood />} />
     <Route path="*" element={<ComingSoon title="Page not found" />} />

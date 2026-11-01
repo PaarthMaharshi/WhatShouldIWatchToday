@@ -11,6 +11,18 @@ export const genreLine = (m, n = 3) =>
 export const money = (n) =>
   n ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n) : null
 
+/** "3h ago" style relative time from a unix timestamp in seconds. */
+export const timeAgo = (ts) => {
+  const s = Math.max(1, Date.now() / 1000 - ts)
+  const steps = [[60, 's'], [60, 'm'], [24, 'h'], [30, 'd'], [12, 'mo'], [Infinity, 'y']]
+  let v = s
+  for (const [size, unit] of steps) {
+    if (v < size) return `${Math.floor(v)}${unit} ago`
+    v /= size
+  }
+  return ''
+}
+
 /** TMDB overview, or a generated one-liner when TMDB data is not cached. */
 export const synopsis = (m) => {
   if (m.overview) return m.overview

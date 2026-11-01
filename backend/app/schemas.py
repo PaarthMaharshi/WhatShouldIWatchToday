@@ -34,6 +34,27 @@ class MoodIn(BaseModel):
     seed: int | None = None                                            # varies the picks
 
 
+class PostIn(BaseModel):
+    user_id: int
+    title: str = Field(min_length=3, max_length=150)
+    body: str = Field("", max_length=5000)
+    flair: str = "discussion"
+    movie_id: int | None = None
+
+
+class CommentIn(BaseModel):
+    user_id: int
+    body: str = Field(min_length=1, max_length=3000)
+    parent_id: int | None = None
+
+
+class VoteIn(BaseModel):
+    user_id: int
+    target_type: str = Field(pattern="^(post|comment)$")
+    target_id: int
+    value: int = Field(ge=-1, le=1)
+
+
 class WatchlistIn(BaseModel):
     movie_id: int
     on: bool = True

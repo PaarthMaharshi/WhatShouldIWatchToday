@@ -57,6 +57,31 @@ CREATE TABLE IF NOT EXISTS watchlist (
     ts       {_FLOAT} NOT NULL,
     PRIMARY KEY (user_id, movie_id)
 );
+-- Forum (see forum.py)
+CREATE TABLE IF NOT EXISTS posts (
+    id         {_ID},
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL DEFAULT '',
+    flair      TEXT NOT NULL DEFAULT 'discussion',
+    movie_id   INTEGER,
+    created_at {_FLOAT} NOT NULL
+);
+CREATE TABLE IF NOT EXISTS comments (
+    id         {_ID},
+    post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    parent_id  INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body       TEXT NOT NULL,
+    created_at {_FLOAT} NOT NULL
+);
+CREATE TABLE IF NOT EXISTS votes (
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_type TEXT NOT NULL,          -- 'post' or 'comment'
+    target_id   INTEGER NOT NULL,
+    value       INTEGER NOT NULL,       -- +1 or -1
+    PRIMARY KEY (user_id, target_type, target_id)
+);
 """
 
 

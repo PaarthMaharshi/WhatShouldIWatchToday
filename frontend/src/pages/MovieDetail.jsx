@@ -101,6 +101,9 @@ export default function MovieDetail() {
             <div className="flex items-center gap-2 text-xs text-muted">
               <BookmarkButton movie={m} className="!text-accent" /> Watchlist
             </div>
+            <Link to={`/forum?movie=${m.id}`} className="label-caps inline-block border border-ink px-3 py-2 text-[10px] transition hover:bg-ink hover:text-bg">
+              Discuss on the forum →
+            </Link>
           </div>
         </div>
 
