@@ -18,7 +18,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")   # never overrides real env vars
+# .env.local is written by `neon init`; neither file overrides real env vars.
+for _env in (".env.local", ".env"):
+    load_dotenv(Path(__file__).resolve().parents[2] / _env)
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
 IS_POSTGRES = bool(DATABASE_URL)
 

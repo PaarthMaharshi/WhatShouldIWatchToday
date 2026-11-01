@@ -26,3 +26,9 @@ frontend/dist/
 
 # Noisy local training log
 artifacts/train_log.txt
+.neon
+.env.local
+
+# Neon: connection strings (secret) and local project link
+.env.local
+.neon
