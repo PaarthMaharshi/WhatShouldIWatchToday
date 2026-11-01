@@ -1,24 +1,38 @@
 """End-to-end API tests: python -m pytest tests -q (from the project root).
 
-Uses a temporary SQLite file so the real app database is untouched.
+By default they use a throwaway SQLite file, so no real database is touched
+(even if .env sets DATABASE_URL). To test the PostgreSQL backend, point
+TEST_DATABASE_URL at a *separate* test database or Neon branch; every user the
+tests create is deleted again at the end.
 Requires artifacts/serving.joblib (run `python -m ml.train` first).
 """
 import os
 import tempfile
 
-os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
+if os.getenv("TEST_DATABASE_URL"):
+    os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
+else:
+    # Empty values (not deletion) so load_dotenv cannot re-add a real URL from .env.
+    os.environ["DATABASE_URL"] = ""
+    os.environ["POSTGRES_URL"] = ""
+    os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
 
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.app import db
 from backend.app.main import app
 from backend.app.services.recommender import MODELS
+
+CREATED = []
 
 
 @pytest.fixture(scope="module")
 def client():
     with TestClient(app) as c:
         yield c
+    for uid in CREATED:          # leave the database as we found it
+        db.delete_user(uid)
 
 
 @pytest.fixture(scope="module")
@@ -26,7 +40,12 @@ def new_user(client):
     r = client.post("/users", json={"name": "Asha", "genres": ["Animation", "Comedy"],
                                     "favorite_movie_ids": [1, 364]})
     assert r.status_code == 201
+    CREATED.append(r.json()["id"])
     return r.json()
+
+
+def test_backend_in_use():
+    print("database backend:", "PostgreSQL" if db.IS_POSTGRES else "SQLite")
 
 
 def test_health_and_genres(client):
@@ -90,6 +109,7 @@ def test_bad_inputs(client, new_user):
 
 def test_demo_user_and_watchlist(client):
     u = client.post("/users/demo", json={"movielens_user_id": 414}).json()
+    CREATED.append(u["id"])
     info = client.get(f"/users/{u['id']}").json()
     assert info["rating_count"] > 1000
     r = client.get(f"/recommendations/{u['id']}", params={"model": "user_knn"}).json()

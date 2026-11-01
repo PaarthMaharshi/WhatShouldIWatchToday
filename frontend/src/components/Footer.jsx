@@ -59,7 +59,7 @@ export default function Footer() {
             <li><Link className="hover:text-ink" to="/for-you">For You</Link></li>
             <li><Link className="hover:text-ink" to="/under-the-hood">Under the hood</Link></li>
             <li><Link className="hover:text-ink" to="/welcome">Onboarding</Link></li>
-            <li><a className="hover:text-ink" href={import.meta.env.DEV ? 'http://localhost:8000/docs' : '/api/docs'} target="_blank" rel="noreferrer">API docs</a></li>
+            <li><a className="hover:text-ink" href={import.meta.env.DEV ? 'http://localhost:8000/docs' : `${import.meta.env.VITE_API_URL || '/api'}/docs`} target="_blank" rel="noreferrer">API docs</a></li>
           </ul>
         </div>
       </div>

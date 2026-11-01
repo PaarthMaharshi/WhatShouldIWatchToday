@@ -145,30 +145,55 @@ The API takes a few seconds to load the models; reload the page if the first req
 on any detail page or in *For You*. For the viva, the onboarding page can also load any of the
 610 original MovieLens users (e.g. 414) to show recommendations for a user with lots of history.
 
-## Deploying to Vercel
+## Deploying
 
-The repository is ready to import into Vercel as-is (one project serves both parts):
+### 1. Create a permanent database (free)
 
-- **Frontend** - `vercel.json` builds `frontend/` with Vite and serves `frontend/dist`.
-- **API** - `api/index.py` runs the same FastAPI app as a Python serverless function under
-  `/api/*`. It loads the committed `artifacts/` (trained models + catalogue bundle), so no
-  training happens on Vercel. `requirements.txt` contains only the runtime packages.
+Users, ratings and watchlists must live in a hosted database - app servers on Vercel or
+Render have temporary disks. The API switches from SQLite to PostgreSQL automatically when
+the environment variable `DATABASE_URL` (or `POSTGRES_URL`) is set, and creates its tables on
+first start.
 
-Steps:
-1. On [vercel.com](https://vercel.com) choose **Add New -> Project** and import this GitHub repo.
-   Leave *Root Directory* as the repo root; the settings come from `vercel.json`.
-2. (Optional) Add an environment variable `TMDB_API_KEY` for posters, plots and trailers.
-3. Deploy. The first API request after a cold start takes a few seconds while models load.
+1. Sign up at [neon.tech](https://neon.tech) (free tier, no expiry) and create a project.
+2. Copy the connection string (`postgresql://...?sslmode=require`) - this is `DATABASE_URL`.
+   Treat it like a password: never commit it.
 
-Things to know about the serverless deployment:
-- **User data is temporary.** Serverless functions can only write to `/tmp`, so the SQLite
-  database there is reset whenever Vercel recycles the instance (after inactivity or a
-  redeploy). If a stored user disappears, the app simply returns to onboarding. For permanent
-  accounts, point `DB_PATH` at persistent storage or swap SQLite for a hosted database.
-- **Bundle size.** The Python dependencies (NumPy, SciPy, scikit-learn, pandas) are about
-  285 MB unzipped. If Vercel rejects the function for size, host the API elsewhere with the
-  included `Dockerfile` (Render, Railway, Hugging Face Spaces...) and set the Vercel build
-  environment variable `VITE_API_URL` to that API's URL. The frontend then talks to it directly.
+(On Vercel you can instead use **Storage -> Create Database -> Neon**, which sets
+`DATABASE_URL` for you. Any PostgreSQL works, e.g. Supabase.)
+
+### 2a. Everything on Vercel (simplest)
+
+The repo is ready to import as-is: `vercel.json` builds `frontend/` and `api/index.py` runs the
+same FastAPI app as a Python function under `/api/*`, loading the committed `artifacts/` (no
+training on Vercel).
+
+1. [vercel.com](https://vercel.com) -> **Add New -> Project** -> import this repo
+   (Root Directory = repo root).
+2. Environment variables: `DATABASE_URL` (from step 1), optionally `TMDB_API_KEY`.
+3. Deploy, then open `https://<your-app>.vercel.app/api/health`.
+
+The Python dependencies are ~285 MB unzipped. If the build fails with a function-size error,
+use option 2b.
+
+### 2b. API on Render, website on Vercel
+
+**API** - [render.com](https://render.com) -> **New -> Web Service** -> connect this repo. Render
+builds the included `Dockerfile`. Instance type *Free*; environment variables `DATABASE_URL`
+and optionally `TMDB_API_KEY` and `CORS_ORIGINS=https://<your-app>.vercel.app`. Check
+`https://<service>.onrender.com/health`.
+
+**Website** - on Vercel import the repo with **Root Directory = `frontend`** (Vite is detected;
+`frontend/vercel.json` handles page refreshes) and set `VITE_API_URL=https://<service>.onrender.com`.
+
+Free Render services sleep after 15 minutes without traffic; the next visit takes ~30-60 s to
+wake up. User data is unaffected because it lives in the database.
+
+### Notes
+
+- There are no passwords: a profile is identified by an id stored in the browser. Fine for a
+  class project; real accounts would need authentication.
+- Without `DATABASE_URL` the deployed API falls back to SQLite in `/tmp`, which is wiped
+  regularly - always set it in production.
 
 ## Tests
 
@@ -176,9 +201,11 @@ Things to know about the serverless deployment:
 python -m pytest tests -q
 ```
 
-20 end-to-end tests cover search/filters, movie detail, cold start -> personalised
+21 end-to-end tests cover search/filters, movie detail, cold start -> personalised
 transition, every model, input validation, demo users and the watchlist. They use a
-temporary database.
+throwaway SQLite database (never your real one, even if `.env` sets `DATABASE_URL`).
+To test the PostgreSQL backend, point `TEST_DATABASE_URL` at a separate test database or
+Neon branch; the tests delete every user they create.
 
 ## API
 
