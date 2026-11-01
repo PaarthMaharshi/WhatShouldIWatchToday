@@ -32,26 +32,43 @@ newest 10% test). A "hit" is a test movie the user rated 4 or more.
 
 | Model | RMSE ↓ | MAE ↓ | P@10 ↑ | R@10 ↑ | NDCG@10 ↑ | Coverage ↑ | Diversity ↑ | Novelty ↑ |
 |---|---|---|---|---|---|---|---|---|
-| **Hybrid (Item-kNN + content)** | 0.862 | 0.662 | **0.052** | **0.088** | **0.085** | 0.079 | 0.740 | 2.98 |
-| Item-kNN | 0.868 | 0.667 | 0.050 | 0.087 | 0.084 | 0.076 | 0.775 | 2.90 |
-| User-kNN | 0.878 | 0.679 | 0.043 | 0.078 | 0.071 | 0.020 | 0.817 | 1.67 |
-| Logistic regression (from scratch) | - | - | 0.035 | 0.058 | 0.053 | 0.049 | 0.752 | 2.90 |
-| **Linear regression** | **0.841** | 0.645 | 0.034 | 0.056 | 0.053 | 0.058 | 0.744 | 2.86 |
-| Decision tree | 0.848 | 0.649 | 0.032 | 0.054 | 0.053 | 0.050 | 0.784 | 2.51 |
-| SVM | 0.845 | **0.638** | 0.034 | 0.051 | 0.051 | 0.057 | 0.754 | 3.01 |
-| Logistic regression | - | - | 0.034 | 0.051 | 0.051 | 0.057 | 0.753 | 3.00 |
-| Popularity | 0.999 | 0.777 | 0.028 | 0.048 | 0.047 | 0.012 | 0.804 | 1.46 |
-| Bias baseline (μ + b<sub>u</sub> + b<sub>i</sub>) | 0.896 | 0.696 | 0.022 | 0.034 | 0.033 | 0.007 | 0.801 | 2.31 |
-| Content-kNN | 0.910 | 0.698 | 0.005 | 0.009 | 0.009 | 0.201 | 0.263 | 5.61 |
-| Global mean (random ranking) | 1.075 | 0.847 | 0.001 | 0.001 | 0.001 | 0.439 | 0.816 | 7.10 |
+| **Hybrid (Item-kNN + content)** | 0.862 | 0.662 | **0.051** | 0.087 | **0.0848** | 0.079 | 0.774 | 2.95 |
+| Item-kNN | 0.868 | 0.667 | 0.050 | **0.087** | 0.0840 | 0.076 | 0.803 | 2.90 |
+| User-kNN | 0.878 | 0.679 | 0.043 | 0.078 | 0.0714 | 0.020 | 0.824 | 1.67 |
+| Logistic regression (from scratch) | - | - | 0.035 | 0.055 | 0.0528 | 0.051 | 0.769 | 2.91 |
+| **Linear regression** | **0.842** | 0.646 | 0.035 | 0.057 | 0.0536 | 0.059 | 0.760 | 2.88 |
+| Logistic regression | - | - | 0.034 | 0.052 | 0.0524 | 0.059 | 0.769 | 3.01 |
+| SVM | 0.847 | **0.639** | 0.034 | 0.051 | 0.0519 | 0.059 | 0.770 | 3.02 |
+| Decision tree | 0.848 | 0.649 | 0.032 | 0.052 | 0.0495 | 0.049 | 0.803 | 2.48 |
+| Popularity | 0.999 | 0.777 | 0.028 | 0.048 | 0.0472 | 0.012 | 0.815 | 1.46 |
+| Bias baseline (μ + b<sub>u</sub> + b<sub>i</sub>) | 0.896 | 0.696 | 0.022 | 0.034 | 0.0325 | 0.007 | 0.811 | 2.31 |
+| Content-kNN | 0.908 | 0.694 | 0.010 | 0.015 | 0.0168 | 0.167 | 0.408 | 5.12 |
+| Global mean (random ranking) | 1.075 | 0.847 | 0.001 | 0.001 | 0.0008 | 0.439 | 0.825 | 7.10 |
+
+The content model uses genres, MovieLens tags and TMDB plot summaries (available for the
+~2,000 most-rated movies). Genre and text features are normalised separately and their
+similarities added, so shared plot words can only raise a match. Diversity is measured
+with these content vectors.
 
 **Cold start (NDCG@10):** new users with 5 picks - K-means segment 0.053, popularity 0.047,
-Item-kNN 0.041. New (unrated) items - Content-kNN 0.110 vs Item-kNN 0.045 vs random 0.037.
+Item-kNN 0.041. New (unrated) items - Content-kNN 0.145 vs Item-kNN 0.045 vs random 0.037.
+
+**Effect of adding plot text** (same splits, same tuned settings):
+
+| | Genres + tags | + plots, one vector | + plots, separate blocks (used) |
+|---|---|---|---|
+| Content-kNN NDCG@10 (existing users) | 0.0090 | 0.0044 | **0.0168** |
+| Content-kNN NDCG@10 (new, unrated movies) | 0.110 | 0.137 | **0.145** |
+| Hybrid NDCG@10 | 0.0852 | 0.0856 | 0.0848 |
+
+Normalising genres and text as one vector let movies with *no* plot text outrank richly
+described ones (Toy Story 2 fell out of Toy Story's top 6); scoring the blocks separately
+fixed that and roughly doubled Content-kNN's accuracy. The hybrid is unchanged within noise.
 
 Key take-aways (full discussion in `notebooks/02_training_evaluation.ipynb`):
 - Supervised models predict *ratings* best, but the kNN hybrid builds the best *top-10 lists*.
 - Popularity is accurate but recommends the same blockbusters to everyone (1% coverage).
-- Content-kNN reaches the long tail and new movies, but its lists are repetitive.
+- Content-kNN reaches the long tail and new movies, but on its own it ranks poorly.
 - The from-scratch logistic regression matches scikit-learn exactly (ROC-AUC 0.807 both).
 
 > Screenshots: see `docs/screenshots/` (Home, Movie detail, For You, Under the hood, Browse).

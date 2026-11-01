@@ -17,6 +17,7 @@ class Explainer:
     def similarity(self, item, others):
         others = np.asarray(others)
         sim = (self.content.X[others] @ self.content.X[item].T).toarray().ravel()
+        sim = sim / getattr(self.content, "max_sim", 1.0)   # back to a 0-1 scale
         if self.cf is not None:
             cf = self.cf.S[item].toarray().ravel()[others]
             sim = 0.5 * sim + 0.5 * cf

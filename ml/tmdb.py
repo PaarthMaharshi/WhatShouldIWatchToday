@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # Serverless file systems are read-only except /tmp.
 CACHE = Path(os.getenv("TMDB_CACHE_DIR") or
              ("/tmp/tmdb-cache" if os.getenv("VERCEL") else ROOT / "data" / "cache" / "tmdb"))
-API = "https://api.themoviedb.org/3/movie/{id}"
+API = "https://{host}/3/movie/{id}"
+HOSTS = ("api.themoviedb.org", "api.tmdb.org")
 IMG = "https://image.tmdb.org/t/p/{size}{path}"
 
 load_dotenv(ROOT / ".env")
@@ -37,18 +38,23 @@ def fetch(tmdb_id: int, force: bool = False):
     key = os.getenv("TMDB_API_KEY")
     if not key:
         return None
-    try:
-        resp = requests.get(
-            API.format(id=int(tmdb_id)),
-            params={"api_key": key,
-                    "append_to_response": "credits,videos,release_dates,images",
-                    "include_image_language": "en,null"},
-            timeout=5,
-        )
-    except requests.RequestException:
-        return None          # offline: caller falls back to placeholders
-    if resp.status_code != 200:
-        return None
+    resp = None
+    # api.tmdb.org is TMDB's alternate host; it helps when a network drops
+    # connections to the main one.
+    for host in HOSTS:
+        try:
+            resp = requests.get(
+                API.format(host=host, id=int(tmdb_id)),
+                params={"api_key": key,
+                        "append_to_response": "credits,videos,release_dates,images",
+                        "include_image_language": "en,null"},
+                timeout=8,
+            )
+            break
+        except requests.RequestException:
+            continue
+    if resp is None or resp.status_code != 200:
+        return None          # offline or unknown id: caller shows placeholders
     try:
         CACHE.mkdir(parents=True, exist_ok=True)
         path.write_text(resp.text, encoding="utf-8")

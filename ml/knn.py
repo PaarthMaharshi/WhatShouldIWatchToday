@@ -13,14 +13,15 @@ from ml.baselines import (RATING_MAX, RATING_MIN, BiasBaseline, Recommender,
                           binary, liked)
 
 
-def topk_cosine(X, k, shrink=0.0, B=None, block=1000):
+def topk_cosine(X, k, shrink=0.0, B=None, block=1000, normalize_rows=True):
     """Top-k cosine neighbours of every row of X as a sparse (n x n) matrix.
 
     shrink: damp similarities supported by few co-ratings,
             s * n_co / (n_co + shrink); B is the binary support matrix.
+    normalize_rows=False uses plain dot products (for pre-weighted features).
     Only positive similarities are kept; the diagonal is removed.
     """
-    X = normalize(X.tocsr(), axis=1)
+    X = normalize(X.tocsr(), axis=1) if normalize_rows else X.tocsr()
     n = X.shape[0]
     XT = X.T.tocsc()
     BT = B.T.tocsc() if shrink else None

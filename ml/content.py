@@ -42,26 +42,41 @@ class ContentModel(ItemNeighbourModel):
         self.genre_vec = TfidfVectorizer(token_pattern=r"\S+", sublinear_tf=True)
         self.text_vec = TfidfVectorizer(stop_words="english", sublinear_tf=True,
                                         min_df=2, max_features=20000)
-        Xg = self.genre_vec.fit_transform(genre_docs)
-        Xt = self.text_vec.fit_transform(text_docs)
-        self.X = normalize(sparse.hstack([genre_w * Xg, text_w * Xt]).tocsr())
+        self.X = self._blocks(self.genre_vec.fit_transform(genre_docs),
+                              self.text_vec.fit_transform(text_docs))
+        # Row-normalised copy for diversity metrics and profile building.
+        self.Xn = normalize(self.X)
+        self.max_sim = genre_w ** 2 + text_w ** 2
+
+    def _blocks(self, Xg, Xt):
+        """Normalise the genre and text blocks separately, then weight them.
+
+        A dot product of two rows is then genre_w^2 * cos(genres) +
+        text_w^2 * cos(text): shared plot words can only add similarity. (One
+        vector normalised as a whole would instead rank movies with no text
+        above richly described ones that share both genres and plot.)
+        """
+        return sparse.hstack([self.genre_w * normalize(Xg),
+                              self.text_w * normalize(Xt)]).tocsr()
 
     def _build_sim(self, R):
         # Similarity is independent of ratings: build once and reuse.
         if self.S is None or self.S_k != self.k:
             self.S_k = self.k
-            return topk_cosine(self.X, self.k)
+            return topk_cosine(self.X, self.k, normalize_rows=False)
         return self.S
 
     def encode_item(self, genres, tags="", overview=""):
         """Vector for an item that is not in the catalogue (cold-start item)."""
-        xg = self.genre_vec.transform([_genre_doc(genres)])
-        xt = self.text_vec.transform([f"{tags} {overview}"])
-        return normalize(sparse.hstack([self.genre_w * xg, self.text_w * xt]).tocsr())
+        return self._blocks(self.genre_vec.transform([_genre_doc(genres)]),
+                            self.text_vec.transform([f"{tags} {overview}"]))
 
     def similar_to_vector(self, x, n=12, exclude=None):
-        """Top-n catalogue items most similar to feature vector x."""
-        sims = (self.X @ x.T).toarray().ravel()
+        """Top-n catalogue items most similar to feature vector x.
+
+        Scores are divided by max_sim, so 1.0 means identical genres and text.
+        """
+        sims = (self.X @ x.T).toarray().ravel() / self.max_sim
         if exclude is not None:
             sims[list(exclude)] = -1
         top = np.argsort(-sims)[:n]

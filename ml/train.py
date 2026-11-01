@@ -116,7 +116,7 @@ def main(skip_tune=False):
 
     content = build_content(ds, overviews, int(knn["content"]["k"]))
     content.fit(R_tr)
-    X = content.X
+    X = content.Xn          # row-normalised features for the diversity metric
 
     # 2. K-means segments: choose k, make plot --------------------------------
     n_seg, sil = choose_k(R_tr, G)
