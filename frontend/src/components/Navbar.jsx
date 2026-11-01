@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context'
-import { BellIcon, CloseIcon, MenuIcon, MoonIcon, SearchIcon, SunIcon } from './Icons'
+import { BellIcon, CloseIcon, MenuIcon, MoonIcon, SearchIcon, SparklesIcon, SunIcon } from './Icons'
 import Logo from './Logo'
 
 const LINKS = [
@@ -30,7 +30,7 @@ function usePopover() {
 }
 
 export default function Navbar() {
-  const { user, theme, toggleTheme, signOut } = useApp()
+  const { user, theme, toggleTheme, signOut, motionOn, toggleMotion } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [drawer, setDrawer] = useState(false)
@@ -52,11 +52,15 @@ export default function Navbar() {
   const initials = user?.name?.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/60 bg-bg/85 backdrop-blur">
+    <header className="sticky top-0 z-40 px-2 pt-2 sm:px-4 sm:pt-3">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-accent focus:px-3 focus:py-2 focus:text-white">
         Skip to content
       </a>
-      <nav className="container-x flex h-16 items-center justify-between gap-4" aria-label="Main">
+      {/* Floating glass pill */}
+      <nav
+        className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 rounded-full border border-line/70 bg-bg/70 px-3 shadow-card backdrop-blur-xl sm:h-16 sm:px-6"
+        aria-label="Main"
+      >
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
@@ -99,6 +103,17 @@ export default function Navbar() {
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={toggleMotion}
+            aria-pressed={motionOn}
+            aria-label={motionOn ? 'Turn animations off' : 'Turn animations on'}
+            title={motionOn ? 'Animations on' : 'Animations off'}
+            className={`hidden rounded-full p-2 sm:block ${motionOn ? 'text-accent' : 'text-muted hover:text-ink'}`}
+          >
+            <SparklesIcon />
+          </button>
+
           <div className="relative hidden sm:block" ref={bell.ref}>
             <button
               type="button"
@@ -127,7 +142,7 @@ export default function Navbar() {
             type="button"
             onClick={toggleTheme}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            className="rounded-full p-2 text-muted hover:text-ink"
+            className="hidden rounded-full p-2 text-muted hover:text-ink sm:block"
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -144,7 +159,7 @@ export default function Navbar() {
                 {initials}
               </button>
             ) : (
-              <Link to="/welcome" className="ml-1 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white hover:bg-accent-dark">
+              <Link to="/welcome" className="ml-1 whitespace-nowrap rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-accent-dark sm:px-4 sm:py-2 sm:text-xs">
                 Get started
               </Link>
             )}
@@ -197,6 +212,23 @@ export default function Navbar() {
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              onClick={toggleMotion}
+              aria-pressed={motionOn}
+              className="mt-10 flex items-center gap-2 text-sm text-muted hover:text-ink"
+            >
+              <SparklesIcon className={motionOn ? 'text-accent' : ''} />
+              Animations: {motionOn ? 'on' : 'off'}
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="mt-5 flex items-center gap-2 text-sm text-muted hover:text-ink"
+            >
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            </button>
           </div>
         </div>
       )}

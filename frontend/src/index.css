@@ -65,6 +65,59 @@
   }
 }
 
+/* ---- Cinematic animated background (inspired by dotted-grid + drifting
+   shapes + twinkles; recoloured as stage lights for a movie site) ---- */
+:root {
+  --glow-1: 232 64 58;   /* accent red */
+  --glow-2: 236 72 153;  /* rose */
+  --glow-3: 251 146 60;  /* warm amber */
+  --dot: 22 22 24;
+  --glow-alpha: 0.18;
+}
+.dark {
+  --glow-1: 232 64 58;
+  --glow-2: 109 40 217;  /* deep violet */
+  --glow-3: 13 148 136;  /* teal */
+  --dot: 255 255 255;
+  --glow-alpha: 0.22;
+}
+.cinema-dots {
+  background-image: radial-gradient(rgb(var(--dot) / 0.07) 1px, transparent 1.6px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 85%);
+}
+.cinema-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+}
+.cinema-glow.a { width: 46vw; height: 46vw; left: -12vw; top: -14vw; background: rgb(var(--glow-1) / var(--glow-alpha)); animation: drift-a 26s ease-in-out infinite alternate; }
+.cinema-glow.b { width: 40vw; height: 40vw; right: -14vw; top: 22vh; background: rgb(var(--glow-2) / var(--glow-alpha)); animation: drift-b 32s ease-in-out infinite alternate; }
+.cinema-glow.c { width: 34vw; height: 34vw; left: 30vw; bottom: -18vw; background: rgb(var(--glow-3) / calc(var(--glow-alpha) * 0.8)); animation: drift-c 38s ease-in-out infinite alternate; }
+@keyframes drift-a { to { transform: translate(14vw, 10vh) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(-12vw, -8vh) scale(0.9); } }
+@keyframes drift-c { to { transform: translate(-8vw, -14vh) scale(1.2); } }
+.cinema-twinkle { animation: twinkle 3.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.6) rotate(0deg); }
+  50% { opacity: 0.9; transform: scale(1) rotate(45deg); }
+}
+.cinema-grain {
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Animations toggle (navbar) and the OS reduced-motion setting both stop the
+   decorative motion; essential transitions stay. */
+.motion-off .cinema-glow,
+.motion-off .cinema-twinkle,
+.motion-off .animate-pulse-soft { animation: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

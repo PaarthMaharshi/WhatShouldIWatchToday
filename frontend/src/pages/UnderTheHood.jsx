@@ -2,11 +2,20 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import Artwork from '../components/Artwork'
 import { MatchBadge } from '../components/Badges'
+import { Counter, Spotlight } from '../components/Motion'
 import { ErrorNote } from '../components/Skeletons'
 import { useApp } from '../context'
 import { useAsync, useModels } from '../hooks'
 
 const COMPARE = ['popularity', 'content', 'item_knn', 'hybrid']
+
+// MovieLens ml-latest-small facts (fixed dataset, see notebooks/01_eda.ipynb).
+const DATASET_STATS = [
+  ['ratings learned from', 100836, '', 0],
+  ['movies in the catalogue', 9742, '', 0],
+  ['MovieLens users', 610, '', 0],
+  ['of the rating matrix is empty', 98.3, '%', 1],
+]
 
 // Which direction is "better" for each metric (used to highlight the best value).
 const METRICS = [
@@ -42,12 +51,12 @@ function ModelCards({ models, active, onPick }) {
       {models.map((m) => {
         const on = m.key === active
         return (
+          <Spotlight key={m.key} className={`!rounded-xl !p-0 ${on ? 'ring-2 ring-accent' : ''}`}>
           <button
-            key={m.key}
             type="button"
             aria-pressed={on}
             onClick={() => onPick(m.key)}
-            className={`rounded-xl border p-5 text-left transition hover:border-accent/70 ${on ? 'border-accent bg-accent/10' : 'border-line bg-surface'}`}
+            className="block h-full w-full p-5 text-left"
           >
             <span className="eyebrow">{m.family}</span>
             <span className="mt-1 block font-display text-lg font-bold">{m.label}</span>
@@ -60,6 +69,7 @@ function ModelCards({ models, active, onPick }) {
               {on ? 'In use across the app' : 'Use this model'}
             </span>
           </button>
+          </Spotlight>
         )
       })}
     </div>
@@ -205,6 +215,17 @@ export default function UnderTheHood() {
         Every list in the app comes from one of the models below. Pick one and the whole site switches to it.
         All numbers are measured on held-out test ratings the models never saw.
       </p>
+
+      <dl className="mt-10 grid grid-cols-2 gap-6 border-y border-line py-6 sm:grid-cols-4">
+        {DATASET_STATS.map(([label, value, suffix, decimals]) => (
+          <div key={label}>
+            <dd className="font-display text-3xl font-extrabold sm:text-4xl">
+              <Counter to={value} suffix={suffix} decimals={decimals} />
+            </dd>
+            <dt className="mt-1 text-xs text-muted">{label}</dt>
+          </div>
+        ))}
+      </dl>
 
       <ol className="mt-10 grid gap-4 md:grid-cols-5">
         {STEPS.map(([t, d], i) => (

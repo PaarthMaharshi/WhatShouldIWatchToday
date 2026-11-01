@@ -4,6 +4,7 @@ import Favorites from '../components/home/Favorites'
 import Greats from '../components/home/Greats'
 import Hero from '../components/home/Hero'
 import PicksRow from '../components/home/PicksRow'
+import { StarButton } from '../components/Motion'
 import { useApp } from '../context'
 import { useAsync } from '../hooks'
 
@@ -33,9 +34,9 @@ export default function Home() {
               <p className="font-display text-lg font-bold">Get recommendations made for you</p>
               <p className="text-sm text-muted">Pick a few genres and favourite films. It takes 30 seconds.</p>
             </div>
-            <Link to="/welcome" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-dark">
+            <StarButton as={Link} to="/welcome" className="text-sm font-semibold">
               Get started
-            </Link>
+            </StarButton>
           </div>
         </div>
       )}

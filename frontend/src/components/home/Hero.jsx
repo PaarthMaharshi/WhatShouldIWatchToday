@@ -5,6 +5,7 @@ import Artwork from '../Artwork'
 import { BigRating, MatchBadge, ReasonLine } from '../Badges'
 import { ArrowLeft, ArrowRight, PlayIcon } from '../Icons'
 import { HeroSkeleton } from '../Skeletons'
+import { RevealText } from '../Motion'
 import TrailerModal from '../TrailerModal'
 
 /** Reference B hero: featured movie inside a faint circle, arrows either side. */
@@ -56,7 +57,7 @@ export default function Hero({ items, eyebrow, loading }) {
               <span className="mx-2" aria-hidden="true">·</span>
               {genreLine(m)}
             </p>
-            <h1 className="mt-3 text-4xl font-bold leading-[1.1] drop-shadow-lg sm:text-5xl">{m.title}</h1>
+            <RevealText as="h1" text={m.title} className="mt-3 text-4xl font-bold leading-[1.1] drop-shadow-lg sm:text-5xl" />
             <div className="mt-4 flex items-center gap-4">
               <BigRating rating={m.rating} />
               <MatchBadge match={m.match} />

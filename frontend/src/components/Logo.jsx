@@ -6,7 +6,7 @@ export default function Logo({ className = '' }) {
     <Link
       to="/"
       aria-label="WhatShouldIWatchToday home"
-      className={`inline-flex items-baseline whitespace-nowrap font-display text-[13px] font-extrabold tracking-tight sm:text-lg ${className}`}
+      className={`inline-flex items-baseline whitespace-nowrap font-display text-[12px] font-extrabold tracking-tight sm:text-lg ${className}`}
     >
       WhatShouldIWatch
       <span className="text-accent">Today</span>

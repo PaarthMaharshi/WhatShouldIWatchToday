@@ -102,6 +102,7 @@ def simplify(raw: dict) -> dict:
         if raw.get("backdrop_path") else None,
         "director": pick("Director"),
         "writer": pick("Screenplay", "Writer"),
+        "composer": pick("Original Music Composer", "Music"),
         "cast": [{"name": c["name"],
                   "photo": IMG.format(size="w185", path=c["profile_path"])
                   if c.get("profile_path") else None} for c in cast],

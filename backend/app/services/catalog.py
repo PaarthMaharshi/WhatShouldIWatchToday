@@ -113,6 +113,7 @@ class Catalog:
             "language": meta.get("language"),
             "director": meta.get("director", []),
             "writer": meta.get("writer", []),
+            "composer": meta.get("composer", []),
             "cast": meta.get("cast", []),
             "gallery": meta.get("gallery", []),
             "tmdb_rating": meta.get("tmdb_rating"),

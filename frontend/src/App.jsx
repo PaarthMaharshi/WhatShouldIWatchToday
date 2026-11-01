@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import CinematicBackground from './components/CinematicBackground'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
+import ClickSpark from './components/reactbits/ClickSpark'
+import { useApp } from './context'
 import Home from './pages/Home'
 import Welcome from './pages/Welcome'
 import ComingSoon from './pages/ComingSoon'
@@ -19,8 +22,11 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const { motionOn } = useApp()
   return (
-    <div className="flex min-h-screen flex-col">
+    <ClickSpark sparkColor="#E8403A" sparkCount={10} sparkRadius={26} disabled={!motionOn}
+      className="flex min-h-screen flex-col">
+      <CinematicBackground />
       <ScrollToTop />
       <Navbar />
       <main id="main" className="flex-1 overflow-x-clip">
@@ -35,6 +41,6 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
-    </div>
+    </ClickSpark>
   )
 }

@@ -9,6 +9,11 @@ export function AppProvider({ children }) {
   const [userId, setUserId] = useStoredState('wsiwt.userId', null)
   const [theme, setTheme] = useStoredState('wsiwt.theme', 'dark')
   const [model, setModel] = useStoredState('wsiwt.model', 'hybrid')
+  // Animations default to off for people who ask their OS for reduced motion.
+  const [motionOn, setMotionOn] = useStoredState(
+    'wsiwt.motion',
+    !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+  )
   const [user, setUser] = useState(null)
   const [watchlist, setWatchlist] = useState(new Set())
   // Bumped after every rating so recommendation lists refetch.
@@ -17,6 +22,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('motion-off', !motionOn)
+  }, [motionOn])
 
   const refreshUser = useCallback(() => {
     if (!userId) {
@@ -67,12 +76,15 @@ export function AppProvider({ children }) {
       toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
       model,
       setModel,
+      motionOn,
+      toggleMotion: () => setMotionOn((m) => !m),
       watchlist,
       toggleWatch,
       rate,
       recsVersion,
     }),
-    [user, userId, setUserId, theme, setTheme, model, setModel, watchlist, toggleWatch, rate, recsVersion],
+    [user, userId, setUserId, theme, setTheme, model, setModel, motionOn, setMotionOn,
+      watchlist, toggleWatch, rate, recsVersion],
   )
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

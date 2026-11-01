@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Artwork from '../components/Artwork'
+import { StarButton } from '../components/Motion'
 import { ErrorNote, PosterSkeleton } from '../components/Skeletons'
 import { useApp } from '../context'
 import { useAsync } from '../hooks'
@@ -140,13 +141,13 @@ export default function Welcome() {
 
         {err && <p role="alert" className="text-sm text-accent">{err.message}</p>}
 
-        <button
+        <StarButton
           type="submit"
           disabled={!ready || busy}
-          className="rounded-full bg-accent px-8 py-3 font-display text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:bg-accent-dark disabled:opacity-40"
+          className="font-display text-sm font-bold uppercase tracking-[0.2em] disabled:opacity-40"
         >
           {busy ? 'Creating...' : 'Show my recommendations'}
-        </button>
+        </StarButton>
       </form>
 
       <div className="mt-16 rounded-xl border border-line bg-surface p-6">
