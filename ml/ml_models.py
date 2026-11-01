@@ -6,7 +6,10 @@ Two-stage design (standard in industry):
      score (blended with popularity), because scoring all 9.7k movies with
      every model is wasteful;
   2. re-ranking - the supervised model scores those candidates.
-Regressors predict the star rating; classifiers predict P(rating >= 4).
+Regressors predict the star rating (used for RMSE); classifiers predict
+P(liked), trained on rated pairs plus hard negatives (see build_training_set).
+Linear regression ranks with a second linear model fitted to the same liked /
+not-liked target (a linear probability model).
 """
 import copy
 
@@ -19,8 +22,7 @@ from sklearn.svm import SVR, LinearSVC
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ml.baselines import Recommender
-from ml.features import pair_features
-from ml.hybrid import zscore_rows
+from ml.features import candidate_scores, pair_features
 from ml.logreg_scratch import LogisticRegressionScratch
 
 SVR_SAMPLE = 10000   # RBF-SVR is O(n^2): fit on a random subsample
@@ -31,10 +33,16 @@ def _pipe(est):
 
 
 def model_specs():
-    """name -> {'reg': (pipeline, grid) | None, 'clf': (...) | None}."""
+    """name -> {kind: (pipeline, grid)} with kind in reg / clf / rank.
+
+    reg  : predicts the star rating, trained on rated pairs only
+    clf  : predicts liked vs not liked, trained on rated pairs + hard negatives
+    rank : regression on that same 0/1 target, used only to order candidates
+    """
     tree_grid = {"m__max_depth": [4, 6, 8, 12], "m__min_samples_leaf": [20, 50, 100]}
     return {
-        "Linear regression": {"reg": (_pipe(LinearRegression()), {})},
+        "Linear regression": {"reg": (_pipe(LinearRegression()), {}),
+                              "rank": (_pipe(LinearRegression()), {})},
         "Logistic regression": {
             "clf": (_pipe(LogisticRegression(max_iter=1000)),
                     {"m__C": [0.01, 0.1, 1, 10]})},
@@ -73,11 +81,13 @@ def fit_estimator(pipe, params, X, y, sample=None, seed=0):
 
 
 class FeatureModel(Recommender):
-    def __init__(self, name, builder, reg=None, clf=None, n_cand=200):
+    def __init__(self, name, builder, reg=None, clf=None, n_cand=200, ranker=None):
         self.name, self.builder = name, builder
-        self.reg, self.clf, self.n_cand = reg, clf, n_cand
+        self.reg, self.clf, self.n_cand, self.ranker = reg, clf, n_cand, ranker
 
     def _rank_score(self, Xp):
+        if getattr(self, "ranker", None) is not None:
+            return self.ranker.predict(Xp)
         if self.clf is not None:
             if hasattr(self.clf, "predict_proba"):
                 return self.clf.predict_proba(Xp)[:, 1]
@@ -91,9 +101,7 @@ class FeatureModel(Recommender):
         return self.reg.predict(pair_features(mats, u, i))
 
     def candidates(self, mats, R_rows):
-        score = (zscore_rows(mats["iknn_rank"])
-                 + 0.5 * zscore_rows(np.repeat(mats["item_logn"], R_rows.shape[0], 0)))
-        score[R_rows.toarray() > 0] = -np.inf
+        score = candidate_scores(mats["iknn_rank"], mats["item_logn"], R_rows.toarray() > 0)
         return np.argpartition(-score, self.n_cand, axis=1)[:, :self.n_cand]
 
     def rank_matrix(self, mats, R_rows):

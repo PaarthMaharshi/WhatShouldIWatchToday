@@ -35,11 +35,11 @@ newest 10% test). A "hit" is a test movie the user rated 4 or more.
 | **Hybrid (Item-kNN + content)** | 0.862 | 0.662 | **0.051** | 0.087 | **0.0848** | 0.079 | 0.774 | 2.95 |
 | Item-kNN | 0.868 | 0.667 | 0.050 | **0.087** | 0.0840 | 0.076 | 0.803 | 2.90 |
 | User-kNN | 0.878 | 0.679 | 0.043 | 0.078 | 0.0714 | 0.020 | 0.824 | 1.67 |
-| Logistic regression (from scratch) | - | - | 0.035 | 0.055 | 0.0528 | 0.051 | 0.769 | 2.91 |
-| **Linear regression** | **0.842** | 0.646 | 0.035 | 0.057 | 0.0536 | 0.059 | 0.760 | 2.88 |
-| Logistic regression | - | - | 0.034 | 0.052 | 0.0524 | 0.059 | 0.769 | 3.01 |
-| SVM | 0.847 | **0.639** | 0.034 | 0.051 | 0.0519 | 0.059 | 0.770 | 3.02 |
-| Decision tree | 0.848 | 0.649 | 0.032 | 0.052 | 0.0495 | 0.049 | 0.803 | 2.48 |
+| Decision tree | 0.848 | 0.649 | 0.047 | 0.082 | 0.0715 | 0.074 | 0.804 | 2.30 |
+| Logistic regression (from scratch) | - | - | 0.040 | 0.074 | 0.0638 | 0.080 | 0.784 | 2.46 |
+| Logistic regression | - | - | 0.041 | 0.070 | 0.0634 | 0.081 | 0.783 | 2.50 |
+| SVM | 0.847 | **0.639** | 0.040 | 0.070 | 0.0629 | 0.081 | 0.792 | 2.48 |
+| **Linear regression** | **0.842** | 0.646 | 0.039 | 0.070 | 0.0623 | 0.079 | 0.796 | 2.41 |
 | Popularity | 0.999 | 0.777 | 0.028 | 0.048 | 0.0472 | 0.012 | 0.815 | 1.46 |
 | Bias baseline (μ + b<sub>u</sub> + b<sub>i</sub>) | 0.896 | 0.696 | 0.022 | 0.034 | 0.0325 | 0.007 | 0.811 | 2.31 |
 | Content-kNN | 0.908 | 0.694 | 0.010 | 0.015 | 0.0168 | 0.167 | 0.408 | 5.12 |
@@ -50,8 +50,24 @@ The content model uses genres, MovieLens tags and TMDB plot summaries (available
 similarities added, so shared plot words can only raise a match. Diversity is measured
 with these content vectors.
 
-**Cold start (NDCG@10):** new users with 5 picks - K-means segment 0.053, popularity 0.047,
-Item-kNN 0.041. New (unrated) items - Content-kNN 0.145 vs Item-kNN 0.045 vs random 0.037.
+**Cold start (NDCG@10):** new users with 5 picks - K-means segment 0.053, segment + content
+blend 0.049 (used by the app), popularity 0.047, Item-kNN 0.041. New (unrated) items -
+Content-kNN 0.145 vs Item-kNN 0.045 vs random 0.037. The blend weight (75% segment) was
+tuned on validation data: the segment alone scored marginally higher but behaves almost like
+plain popularity, so the most personalised weight within 5% of the best was kept.
+
+**Effect of hard negatives on the supervised re-rankers** (NDCG@10, RMSE unchanged):
+
+| | Rated pairs only | + hard negatives (used) |
+|---|---|---|
+| Decision tree | 0.0495 | **0.0715** (+44%) |
+| Logistic regression | 0.0524 | **0.0634** (+21%) |
+| SVM | 0.0519 | **0.0629** (+21%) |
+| Linear regression | 0.0536 | **0.0623** (+16%) |
+
+Re-rankers trained only on movies users *chose* to rate never learn what users skip. Adding
+unrated movies from each user's own candidate list as "not liked" examples (~2 per rated
+pair) fixed most of that. They still trail Item-kNN, which is also their candidate generator.
 
 **Effect of adding plot text** (same splits, same tuned settings):
 
@@ -66,10 +82,12 @@ described ones (Toy Story 2 fell out of Toy Story's top 6); scoring the blocks s
 fixed that and roughly doubled Content-kNN's accuracy. The hybrid is unchanged within noise.
 
 Key take-aways (full discussion in `notebooks/02_training_evaluation.ipynb`):
-- Supervised models predict *ratings* best, but the kNN hybrid builds the best *top-10 lists*.
+- Supervised models predict *ratings* best, but the kNN hybrid builds the best *top-10 lists*;
+  hard negatives narrowed the gap (decision tree 0.072 vs hybrid 0.085).
 - Popularity is accurate but recommends the same blockbusters to everyone (1% coverage).
 - Content-kNN reaches the long tail and new movies, but on its own it ranks poorly.
-- The from-scratch logistic regression matches scikit-learn exactly (ROC-AUC 0.807 both).
+- The from-scratch logistic regression matches scikit-learn (ROC-AUC 0.727 vs 0.728 on the
+  harder liked-vs-not task that includes hard negatives).
 
 > Screenshots: see `docs/screenshots/` (Home, Movie detail, For You, Under the hood, Browse).
 

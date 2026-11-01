@@ -14,23 +14,24 @@
   },
   "supervised": {
     "Linear regression|reg": {},
+    "Linear regression|rank": {},
     "Logistic regression|clf": {
       "m__C": 1
     },
     "Logistic regression (from scratch)|clf": {},
     "Decision tree|reg": {
       "m__max_depth": 6,
-      "m__min_samples_leaf": 100
+      "m__min_samples_leaf": 50
     },
     "Decision tree|clf": {
-      "m__max_depth": 6,
+      "m__max_depth": 12,
       "m__min_samples_leaf": 100
     },
     "SVM|reg": {
       "m__C": 0.5
     },
     "SVM|clf": {
-      "m__C": 0.1
+      "m__C": 0.01
     }
   }
 }

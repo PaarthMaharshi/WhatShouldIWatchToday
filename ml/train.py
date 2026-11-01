@@ -28,7 +28,7 @@ from ml.hybrid import Hybrid, blend
 from ml.knn import ItemKNN, UserKNN
 from ml.ml_models import (SVR_SAMPLE, FeatureModel, fit_estimator, model_specs,
                           tune)
-from ml.segments import choose_k, genre_matrix
+from ml.segments import UserSegments, choose_k, genre_matrix
 from ml.split import load_dataset
 from ml.tmdb import cached_overviews
 from ml.tune import tune_knn
@@ -67,23 +67,49 @@ def fit_supervised(ds, df, builder, specs, tuned):
     Returns (estimators dict, tuned params).
     """
     X, y_r, y_l = build_training_set(ds, df, builder)
+    rated = ~np.isnan(y_r)
+    print(f"    training rows: {rated.sum()} rated + {(~rated).sum()} hard negatives", flush=True)
     fitted, best = {}, dict(tuned)
     for name, spec in specs.items():
         fitted[name] = {}
         for kind, (pipe, grid) in spec.items():
-            target = y_r if kind == "reg" else y_l
+            # Rating models learn from rated pairs; ranking models also see negatives.
+            Xk, yk = (X[rated], y_r[rated]) if kind == "reg" else (X, y_l)
             sample = SVR_SAMPLE if name == "SVM" and kind == "reg" else None
             key = f"{name}|{kind}"
             if key not in best:
                 print(f"    tuning {key}", flush=True)
-                best[key] = tune(pipe, grid, X, target, kind, sample)
-            fitted[name][kind] = fit_estimator(pipe, best[key], X, target, sample)
+                best[key] = tune(pipe, grid, Xk, yk, kind, sample)
+            fitted[name][kind] = fit_estimator(pipe, best[key], Xk, yk, sample)
     return fitted, best
 
 
 def make_feature_models(builder, fitted):
-    return {name: FeatureModel(name, builder, est.get("reg"), est.get("clf"))
+    return {name: FeatureModel(name, builder, est.get("reg"), est.get("clf"),
+                               ranker=est.get("rank"))
             for name, est in fitted.items()}
+
+
+COLD_WEIGHTS = [0.0, 0.25, 0.5, 0.75, 0.9, 1.0]
+
+
+def tune_cold_weight(content, R, ds, G, genre_names, n_seg, X, tolerance=0.05):
+    """Segment weight of the cold-start blend, chosen on VALIDATION data.
+
+    w = 1 is the K-means segment alone, which behaves much like plain
+    popularity. We take the most personalised (smallest) weight whose NDCG@10
+    is within `tolerance` of the best, since smaller gaps are within noise.
+    """
+    seg = UserSegments(G, n_seg).fit(R)
+    rows = []
+    for w in COLD_WEIGHTS:
+        cs = ColdStart(content, seg, R, genre_names, G, w_seg=w)
+        m = cold_user_experiment({"cs": cs}, ds, R, ds.val, X)["cs"]
+        rows.append({"w_seg": w, "NDCG@10": m["NDCG@10"], "P@10": m["P@10"],
+                     "Coverage": m["Coverage"]})
+    df = pd.DataFrame(rows)
+    ok = df[df["NDCG@10"] >= (1 - tolerance) * df["NDCG@10"].max()]
+    return float(ok["w_seg"].min()), df
 
 
 def main(skip_tune=False):
@@ -127,6 +153,9 @@ def main(skip_tune=False):
     a_r, a_k, alpha_df = tune_alpha(item_knn, content, R_tr, ds, X)
     print(f"Hybrid weights on validation: alpha_rating={a_r} alpha_rank={a_k}")
     plots.alpha_plot({"Item-kNN + content": alpha_df}, PLOTS / "alpha_curve.png")
+    w_cold, cold_df = tune_cold_weight(content, R_tr, ds, G, genre_names, n_seg, X)
+    cold_df.to_csv(ART / "cold_weight_validation.csv", index=False)
+    print(f"Cold-start segment weight on validation: {w_cold}\n{cold_df.round(4).to_string(index=False)}")
 
     # 4. Supervised models: tune on out-of-fold train features -----------------
     builder = FeatureBuilder(ds, content, params_flat, n_seg)
@@ -200,7 +229,7 @@ def main(skip_tune=False):
     plots.segments_plot(seg, genre_names, sil, PLOTS / "segments.png")
 
     # 6. Cold-start experiments ---------------------------------------------
-    cold_blend = ColdStart(content, seg, R_trva, genre_names, G, w_seg=0.5)
+    cold_blend = ColdStart(content, seg, R_trva, genre_names, G, w_seg=w_cold)
     cold_seg = ColdStart(content, seg, R_trva, genre_names, G, w_seg=1.0)
     cold_user = cold_user_experiment(
         {"Popularity": base["Popularity"], "Content-kNN": content,
@@ -232,10 +261,10 @@ def main(skip_tune=False):
         "item_knn": base["Item-kNN"], "user_knn": base["User-kNN"],
         "hybrid": base["Hybrid (Item-kNN + content)"],
         "feature_models": feat, "builder": builder,
-        "cold_start": ColdStart(content, seg, R_all, genre_names, G),
+        "cold_start": ColdStart(content, seg, R_all, genre_names, G, w_seg=w_cold),
         "explainer": Explainer(content, base["Item-kNN"]),
         "params": params, "n_segments": n_seg,
-        "alphas": {"alpha_rating": a_r, "alpha_rank": a_k},
+        "alphas": {"alpha_rating": a_r, "alpha_rank": a_k, "cold_w_seg": w_cold},
     }
     joblib.dump(serving, ART / "serving.joblib", compress=3)
     print("saved", ART / "serving.joblib")

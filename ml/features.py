@@ -10,6 +10,7 @@ import copy
 import numpy as np
 
 from ml.baselines import BiasBaseline, ItemMean, binary, liked, row_mean
+from ml.hybrid import zscore_rows
 from ml.knn import ItemKNN, UserKNN
 from ml.segments import UserSegments, genre_matrix
 from scipy import sparse
@@ -90,21 +91,56 @@ def pair_features(mats, u, i):
     return np.column_stack(cols).astype(np.float32)
 
 
-def build_training_set(ds, df, builder, n_folds=4, seed=0):
-    """Out-of-fold feature table for the ratings in df.
+def candidate_scores(iknn_rank, item_logn, seen):
+    """Stage-1 candidate score: z(Item-kNN score) + 0.5 * z(log popularity).
+
+    iknn_rank (n, I), item_logn (1, I), seen (n, I) bool -> (n, I) with seen = -inf.
+    Shared by training (to draw negatives) and serving (to pick what to re-rank).
+    """
+    score = (zscore_rows(iknn_rank)
+             + 0.5 * zscore_rows(np.repeat(item_logn, iknn_rank.shape[0], 0)))
+    score[seen] = -np.inf
+    return score
+
+
+def build_training_set(ds, df, builder, n_folds=4, seed=0, neg_per_pos=3, n_cand=200):
+    """Out-of-fold feature table for the ratings in df, plus hard negatives.
 
     For each fold the history is the other folds, so the features of a held-out
-    rating are computed without it. Returns X, rating target, like target (>=4).
+    rating are computed without it.
+
+    Rated pairs alone only teach a model which of the movies a user *chose* to
+    watch they liked. At serving time the re-ranker must instead pick among
+    candidates the user never rated, so for every held-out rating we also add
+    `neg_per_pos` "hard negatives": unrated movies drawn from that user's own
+    top-`n_cand` candidate list, labelled "not liked".
+
+    Returns X, rating target (NaN for negatives), like target (1 = rated >= 4).
     """
-    fold = np.random.default_rng(seed).integers(0, n_folds, len(df))
-    Xs, ys = [], []
+    rng = np.random.default_rng(seed)
+    fold = rng.integers(0, n_folds, len(df))
+    rated = ds.matrix(df).toarray() > 0          # anything rated is never a negative
+    Xs, y_rating, y_like = [], [], []
     for f in range(n_folds):
         hold = df[fold == f]
         R = ds.matrix(df[fold != f])
         builder.fit(R)
         mats = builder.matrices(R, self_idx=np.arange(R.shape[0]))
         Xs.append(pair_features(mats, hold["u"].values, hold["i"].values))
-        ys.append(hold["rating"].values)
+        y_rating.append(hold["rating"].values)
+        y_like.append((hold["rating"].values >= 4.0).astype(int))
+        if neg_per_pos:
+            users, counts = np.unique(hold["u"].values, return_counts=True)
+            score = candidate_scores(mats["iknn_rank"][users], mats["item_logn"], rated[users])
+            cand = np.argpartition(-score, n_cand, axis=1)[:, :n_cand]
+            neg_u, neg_i = [], []
+            for row, (u, c) in enumerate(zip(users, counts)):
+                pool = cand[row][np.isfinite(score[row, cand[row]])]
+                k = min(len(pool), neg_per_pos * c)
+                neg_u += [u] * k
+                neg_i += list(rng.choice(pool, k, replace=False))
+            Xs.append(pair_features(mats, np.array(neg_u), np.array(neg_i)))
+            y_rating.append(np.full(len(neg_u), np.nan))
+            y_like.append(np.zeros(len(neg_u), int))
         print(f"    OOF fold {f + 1}/{n_folds} done", flush=True)
-    y = np.concatenate(ys)
-    return np.vstack(Xs), y, (y >= 4.0).astype(int)
+    return np.vstack(Xs), np.concatenate(y_rating), np.concatenate(y_like)
