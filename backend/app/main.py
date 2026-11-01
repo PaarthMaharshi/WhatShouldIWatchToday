@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app import db
-from backend.app.routers import movies, recs, users
+from backend.app.routers import mood, movies, recs, users
 from backend.app.services.catalog import Catalog
 from backend.app.services.recommender import RecommenderService
 
@@ -75,6 +75,7 @@ if PLOTS.exists():
 app.include_router(movies.router, prefix=PREFIX)
 app.include_router(users.router, prefix=PREFIX)
 app.include_router(recs.router, prefix=PREFIX)
+app.include_router(mood.router, prefix=PREFIX)
 
 
 @app.get(f"{PREFIX}/health")

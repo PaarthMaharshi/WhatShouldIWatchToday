@@ -19,6 +19,9 @@ support vector machine, K-means, plus simple baselines.
 - **Cold start**: new users pick genres and favourite movies; a K-means taste segment plus
   content similarity serves them until they have rated 5 movies. New movies are placed by
   content alone.
+- **Mood match**: pick a mood (happy, need a cry, edge of my seat, scare me, make me think...),
+  genres, who you are watching with, time available, era, popular vs hidden gems and an
+  optional free-text wish ("space, heist"); every result says why it matched.
 - **Explainability**: every pick says *"Because you liked X"* and shows a match percentage.
 - **Movie detail page** with a content-based "Related Movies" carousel.
 - **Under the hood** page with the full results table, cold-start results and all plots.
@@ -112,6 +115,7 @@ ML MOVIE PROJECT/
 │   ├── logreg_scratch.py   # logistic regression from scratch (gradient descent)
 │   ├── cold_start.py       # new-user / new-item handling
 │   ├── explain.py          # "Because you liked X"
+│   ├── mood.py             # Mood match: query vector + kNN search + filters + MMR
 │   ├── metrics.py          # RMSE, MAE, P/R/MAP/NDCG@K, coverage, diversity, novelty
 │   ├── evaluate.py         # evaluation + cold-start experiments
 │   ├── tune.py             # grid search with k-fold CV
@@ -243,8 +247,8 @@ wake up. User data is unaffected because it lives in the database.
 python -m pytest tests -q
 ```
 
-21 end-to-end tests cover search/filters, movie detail, cold start -> personalised
-transition, every model, input validation, demo users and the watchlist. They use a
+26 end-to-end tests cover search/filters, movie detail, cold start -> personalised
+transition, every model, Mood match filters, input validation, demo users and the watchlist. They use a
 throwaway SQLite database (never your real one, even if `.env` sets `DATABASE_URL`).
 To test the PostgreSQL backend, point `TEST_DATABASE_URL` at a separate test database or
 Neon branch; the tests delete every user they create.
@@ -262,6 +266,8 @@ Neon branch; the tests delete every user they create.
 | POST | `/users`, `/users/demo` | Onboarding, clone a MovieLens user |
 | GET/POST | `/users/{id}`, `/users/{id}/ratings`, `/users/{id}/watchlist` | Profile data |
 | GET | `/models` | Model registry, results table, cold-start results, plot list |
+| GET | `/mood/options` | Moods, companies, eras, runtimes and discovery levels for the picker |
+| POST | `/mood` | Mood match: `{mood, genres, company, era, runtime, discovery, text, user_id?, k}` |
 
 Model keys: `popularity`, `content`, `item_knn` (alias `collaborative`), `user_knn`, `hybrid`,
 `kmeans`, `linear`, `logistic`, `logistic_scratch`, `tree`, `svm`.
@@ -277,6 +283,12 @@ Model keys: `popularity`, `content`, `item_knn` (alias `collaborative`), `user_k
 4. **Hybrid** - a weighted blend of Item-kNN and content, weight tuned on validation data.
 5. **Serving** - models are trained offline and loaded by the API; a user's rating row is
    scored directly, so new ratings change the next list immediately.
+6. **Mood match** (`ml/mood.py`) - the mood's genres and keywords, chosen genres and any
+   free text are encoded into a query vector in the Content-kNN TF-IDF space; movies are
+   ranked by cosine similarity to it (a nearest-neighbour search), blended with rating
+   quality, popularity (or its opposite for hidden gems) and, when signed in, the user's
+   hybrid score. Era, runtime and family-friendliness are hard filters, and Maximal Marginal
+   Relevance keeps the list varied.
 
 ## Credits and licences
 

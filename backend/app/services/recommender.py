@@ -12,6 +12,8 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
+from ml.mood import COMPANY, MOODS, RUNTIMES, MoodQuery, MoodRecommender
+
 ART = Path(__file__).resolve().parents[3] / "artifacts"
 MIN_RATINGS = 5        # below this a user is "cold" and gets the cold-start model
 
@@ -63,6 +65,10 @@ class RecommenderService:
         self.cold = s["cold_start"]
         self.explainer = s["explainer"]
         self.results = self._load_results()
+        movies = catalog.movies.loc[[int(m) for m in self.item_ids]]
+        self.mood_engine = MoodRecommender(
+            s["content"], movies["genres_list"], movies["year"].astype(float).values,
+            s["R"].getnnz(axis=0), movies["score"].fillna(movies["score"].mean()).values)
 
     # --- helpers -------------------------------------------------------------
     def _load_results(self):
@@ -151,6 +157,52 @@ class RecommenderService:
         g = [x for x in self.catalog.movies.at[int(self.item_ids[item]), "genres_list"]
              if x in genres]
         return {"type": "genre", "text": f"Popular with {g[0]} fans" if g else "Matches your picks"}
+
+    def mood(self, query: MoodQuery, k=12, ratings=None, ml_user_idx=None):
+        """Mood match (see ml/mood.py). Personalised when the user has enough ratings."""
+        eng = self.mood_engine
+        personal, row = None, None
+        if ratings:
+            row = self.row(ratings)
+            if row.nnz >= MIN_RATINGS:
+                self_idx = None if ml_user_idx is None else np.array([ml_user_idx])
+                _, rank = self.models["hybrid"].score_rows(row, self_idx)
+                personal = np.asarray(rank, float).ravel()
+        scores = eng.score(query, personal)
+        if row is not None:
+            scores[row.indices] = -np.inf                 # skip what they've rated
+
+        pool = np.argsort(-scores)[:150]
+        pool = [i for i in pool if np.isfinite(scores[i])]
+        # Runtime and certificate come from TMDB, so check only the shortlist.
+        _, rt_lo, rt_hi = RUNTIMES[query.runtime]
+        certs_ok = COMPANY[query.company].get("certs_ok")
+        if rt_lo or rt_hi or certs_ok:
+            self.catalog.ensure_meta([int(self.item_ids[i]) for i in pool])
+            kept = []
+            for i in pool:
+                meta = self.catalog.meta(int(self.item_ids[i]))
+                runtime, cert = meta.get("runtime"), meta.get("certification")
+                if (rt_lo or rt_hi) and not runtime:
+                    continue                              # unknown length: can't promise it fits
+                if rt_lo and runtime < rt_lo or rt_hi and runtime > rt_hi:
+                    continue
+                if certs_ok and cert and cert not in certs_ok:
+                    continue
+                kept.append(i)
+            pool = kept
+
+        top = eng.diversify(pool[:60], scores, k)
+        cards = self.catalog.cards([self.item_ids[i] for i in top])
+        match = self._match(scores[top]) if top else []
+        for c, i, m in zip(cards, top, match):
+            blob = " ".join(self.catalog.movies.at[c["id"], "tags"]) + " " + (c.get("overview") or "")
+            genres, words = eng.reasons(i, query, blob)
+            bits = genres + [f"“{w}”" for w in words]
+            c["match"] = round(float(m))
+            c["reason"] = {"type": "mood", "text": " · ".join(bits) or MOODS[query.mood]["label"]}
+        return {"mood": query.mood, "label": MOODS[query.mood]["label"],
+                "personalised": personal is not None, "items": cards}
 
     def similar(self, movie_id, k=12):
         if movie_id not in self.index:

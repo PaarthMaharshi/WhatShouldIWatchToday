@@ -20,6 +20,18 @@ class DemoUserCreate(BaseModel):
     movielens_user_id: int
 
 
+class MoodIn(BaseModel):
+    mood: str = "happy"
+    genres: list[str] = []
+    company: str = "solo"
+    era: str = "any"
+    runtime: str = "any"
+    discovery: str = "balanced"
+    text: str = Field("", max_length=120)
+    user_id: int | None = None
+    k: int = Field(12, ge=1, le=30)
+
+
 class WatchlistIn(BaseModel):
     movie_id: int
     on: bool = True

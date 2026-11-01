@@ -8,6 +8,7 @@ const LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/browse', label: 'Browse' },
   { to: '/for-you', label: 'For You' },
+  { to: '/mood', label: 'Mood' },
   { to: '/under-the-hood', label: 'Under the hood' },
 ]
 
@@ -48,7 +49,7 @@ export default function Navbar() {
   }
 
   const linkClass = ({ isActive }) =>
-    `text-sm transition hover:text-ink ${isActive ? 'font-semibold text-ink' : 'text-muted'}`
+    `whitespace-nowrap text-sm transition hover:text-ink ${isActive ? 'font-semibold text-ink' : 'text-muted'}`
   const initials = user?.name?.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
@@ -64,7 +65,7 @@ export default function Navbar() {
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
-            className="rounded p-1 md:hidden"
+            className="rounded p-1 lg:hidden"
             onClick={() => setDrawer(true)}
             aria-label="Open menu"
           >
@@ -73,7 +74,7 @@ export default function Navbar() {
           <Logo />
         </div>
 
-        <ul className="hidden items-center gap-8 md:flex">
+        <ul className="hidden items-center gap-6 lg:flex xl:gap-8">
           {LINKS.map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} className={linkClass}>
@@ -190,7 +191,7 @@ export default function Navbar() {
       </nav>
 
       {drawer && (
-        <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setDrawer(false)}>
+        <div className="fixed inset-0 z-50 bg-black/60 lg:hidden" onClick={() => setDrawer(false)}>
           <div
             className="h-full w-72 bg-bg p-6 shadow-card"
             onClick={(e) => e.stopPropagation()}

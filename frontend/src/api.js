@@ -46,5 +46,7 @@ export const api = {
   watchlist: (id) => request(`/users/${id}/watchlist`),
   setWatchlist: (id, movieId, on) => post(`/users/${id}/watchlist`, { movie_id: movieId, on }),
   models: () => request('/models'),
+  moodOptions: () => request('/mood/options'),
+  mood: (body) => post('/mood', body),
   plotUrl: (name) => `${BASE}/plots/${name}`,
 }

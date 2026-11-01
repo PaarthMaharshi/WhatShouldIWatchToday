@@ -8,6 +8,13 @@ import { StarButton } from '../components/Motion'
 import { useApp } from '../context'
 import { useAsync } from '../hooks'
 
+const MOOD_SHORTCUTS = [
+  ['happy', 'Happy & light'],
+  ['thrill', 'Edge of my seat'],
+  ['cry', 'Need a good cry'],
+  ['scared', 'Scare me'],
+]
+
 /**
  * Home (Reference B). Signed-in users get the selected model's top picks as
  * the hero and the "Top picks" row; visitors see trending movies instead.
@@ -40,6 +47,21 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <section className="container-x mt-10" aria-labelledby="mood-cta">
+        <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface/70 p-6 backdrop-blur md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="mood-cta" className="font-display text-lg font-bold">Not sure what you feel like?</h2>
+            <p className="text-sm text-muted">Pick a mood and we will match the movie.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {MOOD_SHORTCUTS.map(([key, label]) => (
+              <Link key={key} to={`/mood?mood=${key}&go=1`} className="chip">{label}</Link>
+            ))}
+            <Link to="/mood" className="chip chip-on">More moods →</Link>
+          </div>
+        </div>
+      </section>
 
       <PicksRow
         title={userId ? 'Top picks for you' : 'Trending this season'}

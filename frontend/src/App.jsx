@@ -10,6 +10,7 @@ import Welcome from './pages/Welcome'
 import ComingSoon from './pages/ComingSoon'
 import Browse from './pages/Browse'
 import ForYou from './pages/ForYou'
+import Mood from './pages/Mood'
 import MovieDetail from './pages/MovieDetail'
 import UnderTheHood from './pages/UnderTheHood'
 
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/for-you" element={<ForYou />} />
+          <Route path="/mood" element={<Mood />} />
           <Route path="/movie/:id" element={<MovieDetail />} />
           <Route path="/under-the-hood" element={<UnderTheHood />} />
           <Route path="*" element={<ComingSoon title="Page not found" />} />

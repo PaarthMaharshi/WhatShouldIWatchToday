@@ -121,6 +121,42 @@ def test_demo_user_and_watchlist(client):
     assert client.get(f"/movies/1", params={"user_id": u["id"]}).json()["in_watchlist"]
 
 
+def test_mood_options(client):
+    o = client.get("/mood/options").json()
+    assert {"moods", "company", "eras", "runtimes", "discovery"} <= set(o)
+    assert any(m["key"] == "scared" for m in o["moods"])
+
+
+def test_mood_basic_and_reasons(client):
+    r = client.post("/mood", json={"mood": "happy", "k": 8}).json()
+    assert len(r["items"]) == 8 and r["personalised"] is False
+    assert all(m["reason"]["text"] for m in r["items"])
+    assert all(60 <= m["match"] <= 99 for m in r["items"])
+
+
+def test_mood_filters(client):
+    r = client.post("/mood", json={"mood": "scared", "era": "80s90s", "k": 10}).json()
+    assert r["items"] and all(1980 <= m["year"] <= 1999 for m in r["items"])
+    r = client.post("/mood", json={"mood": "scared", "company": "family", "k": 10}).json()
+    assert all("Horror" not in m["genres"] for m in r["items"])
+    r = client.post("/mood", json={"mood": "happy", "runtime": "short", "k": 6}).json()
+    assert all(m["runtime"] and m["runtime"] <= 95 for m in r["items"])
+    r = client.post("/mood", json={"mood": "cry", "discovery": "hidden", "k": 6}).json()
+    assert all(m["rating_count"] <= 60 for m in r["items"])
+
+
+def test_mood_personalised_skips_rated(client, new_user):
+    rated = {m["id"] for m in client.get(f"/users/{new_user['id']}/ratings").json()}
+    assert rated
+    r = client.post("/mood", json={"mood": "happy", "user_id": new_user["id"], "k": 12}).json()
+    assert rated.isdisjoint(m["id"] for m in r["items"])
+
+
+def test_mood_bad_input(client):
+    assert client.post("/mood", json={"mood": "angry"}).status_code == 422
+    assert client.post("/mood", json={"genres": ["Nope"]}).status_code == 422
+
+
 def test_models_endpoint(client):
     info = client.get("/models").json()
     assert {m["key"] for m in info["models"]} == set(MODELS)
