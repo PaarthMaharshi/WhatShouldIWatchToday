@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.app import db
-from backend.app.schemas import DemoUserCreate, UserCreate, WatchlistIn
+from backend.app.schemas import DemoUserCreate, UserCreate, UserUpdate, WatchlistIn
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -46,6 +46,39 @@ def get_user(user_id: int):
     user["rating_count"] = len(ratings)
     user["watchlist_count"] = len(db.get_watchlist(user_id))
     return user
+
+
+@router.patch("/{user_id}")
+def update_user(user_id: int, body: UserUpdate, request: Request):
+    """Edit name, favourite genres and favourite movies.
+
+    Favourites are the user's 5-star ratings (that is how onboarding stores
+    them), so the new list adds 5-star ratings and removes 5-star ratings that
+    were dropped. Other ratings are left alone.
+    """
+    require_user(user_id)
+    catalog = request.app.state.catalog
+    if body.genres is not None:
+        bad = [g for g in body.genres if g not in catalog.genres]
+        if bad:
+            raise HTTPException(422, f"Unknown genres: {bad}")
+    db.update_user(user_id, name=body.name.strip() if body.name else None, genres=body.genres)
+    if body.favorite_movie_ids is not None:
+        wanted = {m for m in body.favorite_movie_ids if catalog.exists(m)}
+        current = {m for m, r in db.get_ratings(user_id).items() if r >= 5.0}
+        for m in current - wanted:
+            db.delete_rating(user_id, m)
+        db.upsert_ratings(user_id, [(m, 5.0) for m in wanted - current])
+    return get_user(user_id)
+
+
+@router.get("/{user_id}/favorites")
+def favorites(user_id: int, request: Request):
+    """The user's 5-star movies, newest first (what the profile editor shows)."""
+    require_user(user_id)
+    # All of them: the editor sends the full list back, so a cut-off list would delete the rest.
+    ids = [m for m, r in db.get_ratings(user_id).items() if r >= 5.0]
+    return request.app.state.catalog.cards([m for m in ids if request.app.state.catalog.exists(m)])
 
 
 @router.get("/{user_id}/ratings")

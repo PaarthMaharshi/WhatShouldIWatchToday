@@ -245,3 +245,25 @@ def test_models_endpoint(client):
     assert {m["key"] for m in info["models"]} == set(MODELS)
     assert any(r["model"] == "Hybrid (Item-kNN + content)" for r in info["results_table"])
     assert "ranking.png" in info["plots"]
+
+
+def test_edit_profile(client):
+    u = client.post("/users", json={"name": "Editor", "genres": ["Comedy"],
+                                    "favorite_movie_ids": [1, 2]}).json()
+    CREATED.append(u["id"])
+    client.post("/ratings", json={"user_id": u["id"], "movie_id": 3, "rating": 3.0})
+
+    r = client.patch(f"/users/{u['id']}", json={"name": "Edited", "genres": ["Drama", "Horror"],
+                                                "favorite_movie_ids": [2, 318]})
+    assert r.status_code == 200
+    assert r.json()["name"] == "Edited" and r.json()["genres"] == ["Drama", "Horror"]
+    favs = {m["id"] for m in client.get(f"/users/{u['id']}/favorites").json()}
+    assert favs == {2, 318}                                    # 1 dropped, 318 added
+    ratings = {m["id"]: m["user_rating"] for m in client.get(f"/users/{u['id']}/ratings").json()}
+    assert ratings.get(3) == 3.0 and 1 not in ratings          # other ratings kept
+
+    # Partial update keeps the rest.
+    r = client.patch(f"/users/{u['id']}", json={"name": "Again"})
+    assert r.json()["genres"] == ["Drama", "Horror"]
+    assert client.patch(f"/users/{u['id']}", json={"genres": ["Nope"]}).status_code == 422
+    assert client.patch("/users/999999", json={"name": "x"}).status_code == 404

@@ -138,6 +138,15 @@ def get_user(user_id):
     return user
 
 
+def update_user(user_id, name=None, genres=None):
+    """Change a profile's name and/or onboarding genres (None = keep)."""
+    with connect() as con:
+        if name is not None:
+            _run(con, "UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+        if genres is not None:
+            _run(con, "UPDATE users SET genres = ? WHERE id = ?", (json.dumps(list(genres)), user_id))
+
+
 def upsert_ratings(user_id, pairs):
     """pairs: iterable of (movie_id, rating)."""
     now = time.time()

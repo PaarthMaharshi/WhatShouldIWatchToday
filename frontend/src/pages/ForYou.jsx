@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import EditProfile from '../components/EditProfile'
 import { api } from '../api'
 import { ReasonLine } from '../components/Badges'
 import Carousel from '../components/Carousel'
@@ -56,6 +58,7 @@ export default function ForYou() {
   const { user, userId, model, recsVersion, watchlist } = useApp()
   const [params] = useSearchParams()
   const welcome = params.get('welcome') === '1'
+  const [editing, setEditing] = useState(params.get('edit') === '1')
   const none = () => Promise.resolve(null)
   const recs = useAsync(() => (userId ? api.recommendations(userId, model, 36) : none()), [userId, model, recsVersion])
   const rated = useAsync(() => (userId ? api.userRatings(userId) : none()), [userId, recsVersion])
@@ -94,6 +97,22 @@ export default function ForYou() {
           <ModelSwitcher />
         </div>
       </header>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3 border-y border-line py-4 text-sm">
+        <span className="label-caps text-[10px] text-muted">Your taste</span>
+        {user?.genres?.length
+          ? user.genres.map((g) => <span key={g} className="chip chip-on !cursor-default">{g}</span>)
+          : <span className="text-muted">No favourite genres set</span>}
+        {!editing && (
+          <button type="button" onClick={() => setEditing(true)} aria-expanded={editing}
+            className="label-caps ml-auto border border-ink px-4 py-2 text-[10px] transition hover:bg-ink hover:text-bg">
+            Edit profile ✎
+          </button>
+        )}
+      </div>
+      {editing && (user
+        ? <EditProfile key={user.id} onClose={() => setEditing(false)} />
+        : <div className="skeleton mt-6 h-64" aria-hidden="true" />)}
 
       {welcome && (
         <div role="status" className="mt-6 flex flex-col gap-1 bg-accent px-6 py-5 text-bg">

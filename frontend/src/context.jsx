@@ -87,9 +87,14 @@ export function AppProvider({ children }) {
       toggleWatch,
       rate,
       recsVersion,
+      // After editing the profile: reload it and refresh every recommendation list.
+      profileChanged: () => {
+        refreshUser()
+        setRecsVersion((v) => v + 1)
+      },
     }),
     [user, userId, setUserId, theme, setTheme, model, setModel, motionOn, setMotionOn,
-      watchlist, toggleWatch, rate, recsVersion],
+      watchlist, toggleWatch, rate, recsVersion, refreshUser],
   )
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

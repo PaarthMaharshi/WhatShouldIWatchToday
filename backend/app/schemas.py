@@ -16,6 +16,13 @@ class UserCreate(BaseModel):
     favorite_movie_ids: list[int] = []   # onboarding picks, stored as 5-star ratings
 
 
+class UserUpdate(BaseModel):
+    """Edit a profile. Fields left out stay as they are."""
+    name: str | None = Field(None, min_length=1, max_length=40)
+    genres: list[str] | None = None
+    favorite_movie_ids: list[int] | None = Field(None, max_length=2000)   # the full set of 5-star favourites
+
+
 class DemoUserCreate(BaseModel):
     movielens_user_id: int
 
