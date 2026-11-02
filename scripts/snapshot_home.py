@@ -49,6 +49,10 @@ def main():
             "favorites": favorites,
             "greats": greats,
             "greats_cast": cast,
+            # Static lists used by the Mood and sign-up pages.
+            "genres": get("/genres"),
+            "mood_options": get("/mood/options"),
+            "welcome_movies": get("/movies", sort="popular", page_size=18),
         }
 
     out = ROOT / "frontend" / "src" / "data" / "home.json"

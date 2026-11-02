@@ -5,6 +5,7 @@ import Artwork from '../components/Artwork'
 import { StarButton } from '../components/Motion'
 import { ErrorNote, PosterSkeleton } from '../components/Skeletons'
 import { useApp } from '../context'
+import { saved } from '../data/home'
 import { useAsync } from '../hooks'
 
 const TARGET_PICKS = 5
@@ -24,8 +25,8 @@ export default function Welcome() {
   const [err, setErr] = useState(null)
   const [demoId, setDemoId] = useState(414)
 
-  const genreList = useAsync(() => api.genres(), [])
-  const movies = useAsync(() => api.movies({ q, sort: 'popular', page_size: 18 }), [q])
+  const genreList = useAsync(() => api.genres(), [], saved.genres)
+  const movies = useAsync(() => api.movies({ q, sort: 'popular', page_size: 18 }), [q], q ? undefined : saved.welcome_movies)
 
   const toggle = (list, setList, v) =>
     setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v])

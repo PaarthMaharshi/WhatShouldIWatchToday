@@ -83,5 +83,9 @@ app.include_router(forum.router, prefix=PREFIX)
 def health():
     # "database" lets you confirm a deployment really uses the permanent
     # PostgreSQL database (SQLite on a serverless host is wiped regularly).
-    return {"status": "ok", "tmdb_key": bool(os.getenv("TMDB_API_KEY")),
-            "database": "postgresql" if db.IS_POSTGRES else "sqlite"}
+    out = {"status": "ok", "tmdb_key": bool(os.getenv("TMDB_API_KEY")),
+           "database": "postgresql" if db.IS_POSTGRES else "sqlite"}
+    if os.getenv("VERCEL") and not db.IS_POSTGRES:
+        out["warning"] = ("No DATABASE_URL set: profiles are stored in temporary SQLite and "
+                          "disappear between requests. Add the Neon DATABASE_URL in Vercel.")
+    return out

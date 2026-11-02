@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { RevealText, Spotlight, StarButton } from '../components/Motion'
 import PosterCard from '../components/PosterCard'
 import { ErrorNote, PosterSkeleton } from '../components/Skeletons'
 import { useApp } from '../context'
+import { saved } from '../data/home'
 import { useAsync } from '../hooks'
 
 // One shade of the red velvet family per mood tile (decorative only).
@@ -45,8 +46,9 @@ function Segmented({ label, options, value, onChange }) {
 export default function Mood() {
   const { userId } = useApp()
   const [params, setParams] = useSearchParams()
-  const options = useAsync(() => api.moodOptions(), [])
-  const genres = useAsync(() => api.genres(), [])
+  const options = useAsync(() => api.moodOptions(), [], saved.mood_options)
+  const genres = useAsync(() => api.genres(), [], saved.genres)
+  const resultsRef = useRef(null)
 
   const read = () => ({
     ...DEFAULTS,
@@ -65,6 +67,11 @@ export default function Mood() {
 
   const run = async (values = form, { more = false } = {}) => {
     setResult({ data: null, loading: true, error: null })
+    // Results sit below the form, so take the user there.
+    setTimeout(() => resultsRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    }))
     const next = new URLSearchParams()
     Object.entries(values).forEach(([k, v]) => {
       const s = Array.isArray(v) ? v.join(',') : v
@@ -122,22 +129,27 @@ export default function Mood() {
           <div role="radiogroup" aria-label="Mood" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {(opts?.moods ?? Array.from({ length: 9 }, (_, i) => ({ key: `s${i}` }))).map((m) =>
               m.label ? (
-                <Spotlight key={m.key} className={`!rounded-2xl !p-0 ${form.mood === m.key ? 'ring-2 ring-accent' : ''}`}>
+                <Spotlight key={m.key} className={`!rounded-2xl !p-0 ${form.mood === m.key ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''}`}>
                   <button
                     type="button"
                     role="radio"
                     aria-checked={form.mood === m.key}
                     onClick={() => set('mood')(m.key)}
-                    className="relative block h-full w-full overflow-hidden p-4 text-left"
+                    className={`relative block h-full w-full overflow-hidden p-4 text-left transition-colors ${
+                      form.mood === m.key ? 'bg-accent text-white' : 'hover:bg-surface'
+                    }`}
                   >
                     <span
                       className="absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-40 blur-2xl"
                       style={{ background: MOOD_COLORS[m.key] }}
                       aria-hidden="true"
                     />
-                    <span className="mb-3 block h-2 w-8 rounded-full" style={{ background: MOOD_COLORS[m.key] }} aria-hidden="true" />
+                    {form.mood === m.key && (
+                      <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-white text-xs font-bold text-accent" aria-hidden="true">✓</span>
+                    )}
+                    <span className="mb-3 block h-2 w-8 rounded-full" style={{ background: form.mood === m.key ? '#fff' : MOOD_COLORS[m.key] }} aria-hidden="true" />
                     <span className="block font-display text-base font-bold leading-tight">{m.label}</span>
-                    <span className="mt-1 block text-xs text-muted">{m.blurb}</span>
+                    <span className={`mt-1 block text-xs ${form.mood === m.key ? 'text-white/80' : 'text-muted'}`}>{m.blurb}</span>
                   </button>
                 </Spotlight>
               ) : (
@@ -186,12 +198,12 @@ export default function Mood() {
 
         <StarButton type="submit" disabled={result.loading || !opts}
           className="font-display text-sm font-bold uppercase tracking-[0.2em] disabled:opacity-40">
-          {result.loading ? 'Finding films…' : 'Find my movies'}
+          {result.loading ? 'Finding films…' : `Find ${opts?.moods.find((m) => m.key === form.mood)?.label ?? 'my'} movies ↓`}
         </StarButton>
       </form>
 
       {/* Results */}
-      <section className="mt-14" aria-live="polite" aria-busy={result.loading}>
+      <section ref={resultsRef} className="mt-14 scroll-mt-24" aria-live="polite" aria-busy={result.loading}>
         {result.error && <ErrorNote error={result.error} onRetry={() => run()} />}
         {(result.loading || result.data) && (
           <h2 className="text-2xl font-bold">
