@@ -6,6 +6,7 @@ import Hero from '../components/home/Hero'
 import PicksRow from '../components/home/PicksRow'
 import { Marquee, Reveal, StarButton } from '../components/Motion'
 import { useApp } from '../context'
+import { homeSnapshot } from '../data/home'
 import { useAsync } from '../hooks'
 
 const MOOD_SHORTCUTS = [
@@ -30,6 +31,7 @@ export default function Home() {
         ? api.recommendations(userId, model, 12)
         : api.trending(12).then((items) => ({ items, label: 'Trending', model_used: 'trending' })),
     [userId, model, recsVersion],
+    homeSnapshot(userId, (s) => ({ items: s.trending, label: 'Trending', model_used: 'trending' })),
   )
 
   const label = recs.data?.label

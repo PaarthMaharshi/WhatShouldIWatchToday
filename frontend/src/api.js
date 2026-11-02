@@ -32,6 +32,8 @@ async function request(path, options = {}) {
 const post = (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) })
 
 export const api = {
+  // Wakes a sleeping serverless API (and loads its models) in the background.
+  warmUp: () => fetch(BASE + '/health').catch(() => {}),
   genres: () => request('/genres'),
   movies: (params) => request('/movies' + qs(params)),
   movie: (id, userId) => request(`/movies/${id}` + qs({ user_id: userId })),

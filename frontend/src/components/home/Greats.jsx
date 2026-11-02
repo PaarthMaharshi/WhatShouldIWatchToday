@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api'
 import { useApp } from '../../context'
+import { homeSnapshot } from '../../data/home'
 import { useAsync } from '../../hooks'
 import { genreLine, runtime, synopsis, toTen } from '../../format'
 import Artwork from '../Artwork'
@@ -35,10 +36,19 @@ function CastAvatars({ cast = [] }) {
 /** Big vertical title list; hovering or focusing a title updates the preview card. */
 export default function Greats() {
   const { userId, recsVersion } = useApp()
-  const list = useAsync(() => api.movies({ sort: 'popular', page_size: 7, hide_rated_for: userId }), [userId, recsVersion])
+  const list = useAsync(
+    () => api.movies({ sort: 'popular', page_size: 7, hide_rated_for: userId }),
+    [userId, recsVersion],
+    homeSnapshot(userId, (s) => s.greats),
+  )
   const [active, setActive] = useState(0)
   const movie = list.data?.items[active]
-  const detail = useAsync(() => (movie ? api.movie(movie.id) : Promise.resolve(null)), [movie?.id])
+  const savedCast = movie && homeSnapshot(userId, (s) => s.greats_cast[movie.id])
+  const detail = useAsync(
+    () => (movie ? api.movie(movie.id) : Promise.resolve(null)),
+    [movie?.id, savedCast],
+    savedCast && { cast: savedCast },
+  )
 
   if (list.error) return <div className="container-x mt-24"><ErrorNote error={list.error} onRetry={list.reload} /></div>
 

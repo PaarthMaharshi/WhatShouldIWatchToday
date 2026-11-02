@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
 
-/** Run an async loader whenever `deps` change; ignores stale responses. */
-export function useAsync(loader, deps) {
-  const [state, setState] = useState({ data: null, loading: true, error: null })
+/**
+ * Run an async loader whenever `deps` change; ignores stale responses.
+ * `saved`: data to use instead of calling the loader (e.g. the bundled home
+ * page snapshot). Pass undefined to load from the API as usual.
+ */
+export function useAsync(loader, deps, saved) {
+  const [state, setState] = useState(() =>
+    saved !== undefined ? { data: saved, loading: false, error: null } : { data: null, loading: true, error: null })
   const run = useRef(0)
 
   const reload = useCallback(() => {
     const id = ++run.current
+    if (saved !== undefined) {
+      setState({ data: saved, loading: false, error: null })
+      return
+    }
     setState((s) => ({ ...s, loading: true, error: null }))
     loader()
       .then((data) => id === run.current && setState({ data, loading: false, error: null }))

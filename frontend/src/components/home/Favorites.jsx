@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../../api'
 import { useApp } from '../../context'
+import { homeSnapshot } from '../../data/home'
 import { useAsync } from '../../hooks'
 import PosterCard from '../PosterCard'
 import { ErrorNote, PosterSkeleton } from '../Skeletons'
@@ -48,6 +49,7 @@ export default function Favorites() {
   const { data, loading, error, reload } = useAsync(
     () => api.movies({ page_size: 10, ...chip.params, hide_rated_for: userId }),
     [active, userId, recsVersion],
+    homeSnapshot(userId, (s) => s.favorites[active]),
   )
 
   return (
