@@ -93,7 +93,7 @@ export default function Navbar() {
         Skip to content
       </a>
       <nav className="container-x flex h-16 items-center justify-between gap-6 sm:h-20" aria-label="Main">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           <Logo />
           <button type="button" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer}
             className="p-1 text-ink hover:text-accent">
@@ -101,7 +101,7 @@ export default function Navbar() {
           </button>
         </div>
 
-        <ul className="hidden items-center gap-8 xl:flex 2xl:gap-12">
+        <ul className="hidden min-w-0 items-center gap-7 2xl:flex">
           {LINKS.map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
