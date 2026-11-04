@@ -96,7 +96,7 @@ export default function Navbar() {
         <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           <Logo />
           <button type="button" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer}
-            className="p-1 text-ink hover:text-accent xl:hidden">
+            className="p-1 text-ink hover:text-accent">
             <MenuIcon />
           </button>
         </div>
