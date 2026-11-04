@@ -96,12 +96,12 @@ export default function Navbar() {
         <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           <Logo />
           <button type="button" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer}
-            className="p-1 text-ink hover:text-accent">
+            className="p-1 text-ink hover:text-accent xl:hidden">
             <MenuIcon />
           </button>
         </div>
 
-        <ul className="hidden min-w-0 items-center gap-7 2xl:flex">
+        <ul className="hidden min-w-0 items-center gap-7 xl:flex">
           {LINKS.map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
