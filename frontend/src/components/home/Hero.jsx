@@ -101,21 +101,19 @@ export default function Hero({ items, eyebrow, loading }) {
 
           {/* Right: ink art over a velvet block */}
           <div className="relative">
-            <div
-              aria-hidden="true"
-              className="absolute -bottom-10 left-[12%] right-[18%] top-[58%] bg-accent sm:-bottom-[24vh] lg:-bottom-[34vh]"
-            />
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={m.id}
-                className="relative z-10"
+                className="relative z-10 pb-10 sm:pb-12"
                 {...anim({
                   initial: { opacity: 0, x: 60 },
                   animate: { opacity: 1, x: 0, transition: { duration: 0.7, ease: EASE } },
                   exit: { opacity: 0, x: -40, transition: { duration: 0.25 } },
                 })}
               >
-                <Link to={`/movie/${m.id}`} aria-label={`Open ${m.title}`} className="block">
+                {/* Velvet block travels with the image so it never looks detached. */}
+                <div aria-hidden="true" className="absolute bottom-0 left-[12%] right-[18%] top-[58%] bg-accent" />
+                <Link to={`/movie/${m.id}`} aria-label={`Open ${m.title}`} className="relative block">
                   <Artwork movie={m} variant="backdrop" eager label={false} className="ink-art aspect-[16/10] w-full shadow-card" />
                 </Link>
               </motion.div>

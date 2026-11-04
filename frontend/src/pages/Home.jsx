@@ -76,11 +76,11 @@ export default function Home() {
 
       <Reveal>
         <PicksRow
-          title={userId ? 'Top picks for you' : 'Trending this season'}
+          title={userId ? 'Top picks for you' : 'Trending with MovieLens viewers'}
           subtitle={
             userId
               ? `Chosen by the ${label ?? '...'} model. Rate movies and this row updates instantly.`
-              : 'Most-liked movies in the last three years of MovieLens ratings.'
+              : 'The movies MovieLens viewers rated highest most recently, whatever year they came out.'
           }
           data={recs.data}
           loading={recs.loading}
