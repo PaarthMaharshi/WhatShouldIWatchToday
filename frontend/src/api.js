@@ -53,8 +53,9 @@ export const api = {
   movies: (params) => request('/movies' + qs(params)),
   movie: (id, userId) => request(`/movies/${id}` + qs({ user_id: userId })),
   trending: (k = 20, userId) => request('/trending' + qs({ k, user_id: userId })),
-  recommendations: (userId, model = 'hybrid', k = 12, offset = 0) =>
-    request(`/recommendations/${userId}` + qs({ model, k, offset: offset || undefined })),
+  // filters: { genre, year_from, year_to, person } narrow the user's own ranking.
+  recommendations: (userId, model = 'hybrid', k = 12, offset = 0, filters = {}) =>
+    request(`/recommendations/${userId}` + qs({ model, k, offset: offset || undefined, ...filters })),
   rate: (userId, movieId, rating, model = 'hybrid') =>
     post('/ratings', { user_id: userId, movie_id: movieId, rating, model }),
   unrate: (userId, movieId) => request(`/ratings/${userId}/${movieId}`, { method: 'DELETE' }),

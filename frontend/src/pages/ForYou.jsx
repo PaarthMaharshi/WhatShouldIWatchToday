@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import EditProfile from '../components/EditProfile'
+import Explore from '../components/Explore'
 import { api } from '../api'
 import { ReasonLine } from '../components/Badges'
 import Carousel from '../components/Carousel'
@@ -179,6 +180,8 @@ export default function ForYou() {
           </button>
         </div>
       )}
+
+      <Explore className="!mt-16 !px-0" heading="Try something different" />
 
       {groups.map((g) => (
         <Row

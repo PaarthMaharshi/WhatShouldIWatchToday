@@ -10,18 +10,28 @@ from backend.app.schemas import RatingIn
 router = APIRouter(tags=["recommendations"])
 
 
-def _recommend(request, user, model, k, offset=0):
+def _recommend(request, user, model, k, offset=0, **filters):
     try:
         return request.app.state.rec.recommend(
-            db.get_ratings(user["id"]), model, k, user["genres"], user["ml_user_idx"], offset)
+            db.get_ratings(user["id"]), model, k, user["genres"], user["ml_user_idx"], offset,
+            **filters)
     except KeyError:
         raise HTTPException(400, f"Unknown model '{model}'. See GET /models.")
 
 
 @router.get("/recommendations/{user_id}")
 def recommendations(user_id: int, request: Request, model: str = "hybrid",
-                    k: int = Query(12, ge=1, le=50), offset: int = Query(0, ge=0, le=450)):
-    return _recommend(request, require_user(user_id), model, k, offset)
+                    k: int = Query(12, ge=1, le=50), offset: int = Query(0, ge=0, le=450),
+                    genre: str | None = None,
+                    year_from: int | None = Query(None, ge=1870, le=2100),
+                    year_to: int | None = Query(None, ge=1870, le=2100),
+                    person: str | None = Query(None, min_length=2, max_length=80),
+                    taste: bool = True):
+    """Personal picks. genre / year_from / year_to / person narrow the user's own
+    ranking ("explore"); taste=false shows the raw model ranking without the
+    genre-taste re-rank (for comparing on the Under the hood page)."""
+    return _recommend(request, require_user(user_id), model, k, offset, genre=genre,
+                      year_from=year_from, year_to=year_to, person=person, taste=taste)
 
 
 @router.post("/ratings")

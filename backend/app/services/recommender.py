@@ -5,6 +5,7 @@ rating row directly (kNN reads the history, supervised models compute fresh
 features), so a new rating changes the next recommendation immediately.
 """
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -16,6 +17,8 @@ from ml.mood import COMPANY, MOODS, RUNTIMES, MoodQuery, MoodRecommender
 
 ART = Path(__file__).resolve().parents[3] / "artifacts"
 MIN_RATINGS = 5        # below this a user is "cold" and gets the cold-start model
+TASTE_WEIGHT = 1.0     # strength of the genre-taste re-rank (in model-score std units)
+PERSON_SHORTLIST = 300  # how many top candidates to check against TMDB cast/crew
 
 # key -> (label in results.csv / UI, family, one-line description)
 MODELS = {
@@ -66,6 +69,21 @@ class RecommenderService:
         self.explainer = s["explainer"]
         self.results = self._load_results()
         movies = catalog.movies.loc[[int(m) for m in self.item_ids]]
+        # Per-item arrays for the taste re-rank and the explore filters.
+        self.genre_names = list(catalog.genres)
+        gi = {g: j for j, g in enumerate(self.genre_names)}
+        rows, cols = [], []
+        for i, gl in enumerate(movies["genres_list"]):
+            for g in gl:
+                if g in gi:
+                    rows.append(i)
+                    cols.append(gi[g])
+        self.G = sparse.csr_matrix((np.ones(len(rows), np.float32), (rows, cols)),
+                                   shape=(len(self.item_ids), len(self.genre_names)))
+        self.item_genres = [set(gl) for gl in movies["genres_list"]]
+        self.item_year = movies["year"].astype(float).values
+        self.item_text = [(str(t) + " " + " ".join(tags)).lower()
+                          for t, tags in zip(movies["clean_title"], movies["tags"])]
         self.mood_engine = MoodRecommender(
             s["content"], movies["genres_list"], movies["year"].astype(float).values,
             s["R"].getnnz(axis=0), movies["score"].fillna(movies["score"].mean()).values)
@@ -104,9 +122,81 @@ class RecommenderService:
             return np.full(len(scores), 90.0)
         return 60 + 39 * (scores - lo) / (hi - lo)
 
+    # --- taste profile + explore filters ----------------------------------------
+    def taste_profile(self, ratings: dict, genres=()):
+        """Genre affinity in [-1, 1]: liked movies (4+) and onboarding genres push a
+        genre up, disliked movies (2 or less) push it down."""
+        p = np.zeros(len(self.genre_names), np.float32)
+        for m, r in ratings.items():
+            i = self.index.get(m)
+            if i is None:
+                continue
+            w = 1.0 if r >= 4 else (-0.6 if r <= 2 else 0.2)
+            p[self.G[i].indices] += w
+        for g in genres:
+            if g in self.genre_names:
+                p[self.genre_names.index(g)] += 2.0
+        top = np.abs(p).max()
+        return p / top if top > 0 else p
+
+    def top_genres(self, profile, n=3):
+        order = np.argsort(-profile)
+        return [self.genre_names[j] for j in order[:n] if profile[j] > 0.15]
+
+    def _interest_rerank(self, rank, profile, weight=TASTE_WEIGHT):
+        """Blend the model's score with how well each movie's genres match the
+        user's saved taste, so picks follow their interests instead of drifting
+        to the same famous films for everyone."""
+        if not profile.any():
+            return rank
+        ok = np.isfinite(rank)
+        if ok.sum() < 2:
+            return rank
+        z = np.full_like(rank, -np.inf)
+        r = rank[ok]
+        z[ok] = (r - r.mean()) / (r.std() + 1e-9)
+        n_genres = np.maximum(np.asarray(self.G.sum(axis=1)).ravel(), 1)
+        aff = np.asarray(self.G @ profile).ravel() / np.sqrt(n_genres)
+        z[ok] += weight * aff[ok] / (np.abs(aff).max() + 1e-9)
+        return z
+
+    def _person_match(self, person, candidates):
+        """Items whose tags/title mention `person`, plus (with TMDB data) items
+        whose cast or director include them."""
+        q = person.lower().strip()
+        hits = {i for i in candidates if q in self.item_text[i]}
+        if os.getenv("TMDB_API_KEY"):
+            short = [i for i in candidates[:PERSON_SHORTLIST] if i not in hits]
+            self.catalog.ensure_meta([int(self.item_ids[i]) for i in short])
+            for i in short:
+                meta = self.catalog.meta(int(self.item_ids[i]))
+                names = [c.get("name", "") if isinstance(c, dict) else str(c)
+                         for c in meta.get("cast", []) + meta.get("director", [])]
+                if any(q in n.lower() for n in names):
+                    hits.add(i)
+        return hits
+
+    def _apply_filters(self, rank, genre=None, year_from=None, year_to=None, person=None):
+        if genre:
+            keep = np.array([genre in gs for gs in self.item_genres])
+            rank[~keep] = -np.inf
+        if year_from:
+            rank[~(self.item_year >= year_from)] = -np.inf
+        if year_to:
+            rank[~(self.item_year <= year_to)] = -np.inf
+        if person:
+            cand = [i for i in np.argsort(-rank) if np.isfinite(rank[i])]
+            hits = self._person_match(person, cand)
+            mask = np.zeros(len(rank), bool)
+            mask[list(hits)] = True
+            rank[~mask] = -np.inf
+        return rank
+
     # --- main entry ------------------------------------------------------------
-    def recommend(self, ratings: dict, model="hybrid", k=12, genres=(), ml_user_idx=None, offset=0):
-        """Top-k picks; `offset` pages further down the same ranking ("show more")."""
+    def recommend(self, ratings: dict, model="hybrid", k=12, genres=(), ml_user_idx=None, offset=0,
+                  genre=None, year_from=None, year_to=None, person=None, taste=True):
+        """Top-k picks; `offset` pages further down the same ranking ("show more").
+        Optional filters (genre / era / person) explore inside the personal ranking."""
         model = self.resolve(model)
         row = self.row(ratings)
         n = row.nnz
@@ -132,7 +222,11 @@ class RecommenderService:
             _, rank = self.models[model].score_rows(row, self_idx)
             rank = np.asarray(rank, dtype=np.float32).ravel().copy()
 
+        profile = self.taste_profile(ratings, genres)
+        if taste and model != "popularity":
+            rank = self._interest_rerank(rank, profile)
         rank[row.indices] = -np.inf                        # never re-recommend
+        rank = self._apply_filters(rank, genre, year_from, year_to, person)
         pool = np.argsort(-rank)[:max(50, offset + k)]
         pool = pool[np.isfinite(rank[pool])]
         match = self._match(rank[pool])[offset:offset + k]
@@ -143,7 +237,8 @@ class RecommenderService:
             c["match"] = round(float(m))
             c["reason"] = self._reason(row, i, used, genres)
         return {"model": model, "model_used": used, "label": MODELS.get(used, ("Cold start",))[0],
-                "note": note, "rated_count": n, "offset": offset, "items": cards}
+                "note": note, "rated_count": n, "offset": offset,
+                "taste": self.top_genres(profile), "items": cards}
 
     def _reason(self, row, item, used, genres):
         expl = self.explainer.because_you_liked(row, item, n=1) if row.nnz else []
