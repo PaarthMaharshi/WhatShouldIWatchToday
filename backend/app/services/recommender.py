@@ -105,7 +105,8 @@ class RecommenderService:
         return 60 + 39 * (scores - lo) / (hi - lo)
 
     # --- main entry ------------------------------------------------------------
-    def recommend(self, ratings: dict, model="hybrid", k=12, genres=(), ml_user_idx=None):
+    def recommend(self, ratings: dict, model="hybrid", k=12, genres=(), ml_user_idx=None, offset=0):
+        """Top-k picks; `offset` pages further down the same ranking ("show more")."""
         model = self.resolve(model)
         row = self.row(ratings)
         n = row.nnz
@@ -132,17 +133,17 @@ class RecommenderService:
             rank = np.asarray(rank, dtype=np.float32).ravel().copy()
 
         rank[row.indices] = -np.inf                        # never re-recommend
-        pool = np.argsort(-rank)[:max(50, k)]
+        pool = np.argsort(-rank)[:max(50, offset + k)]
         pool = pool[np.isfinite(rank[pool])]
-        match = self._match(rank[pool])[:k]
-        top = pool[:k]
+        match = self._match(rank[pool])[offset:offset + k]
+        top = pool[offset:offset + k]
 
         cards = self.catalog.cards([self.item_ids[i] for i in top])
         for c, i, m in zip(cards, top, match):
             c["match"] = round(float(m))
             c["reason"] = self._reason(row, i, used, genres)
         return {"model": model, "model_used": used, "label": MODELS.get(used, ("Cold start",))[0],
-                "note": note, "rated_count": n, "items": cards}
+                "note": note, "rated_count": n, "offset": offset, "items": cards}
 
     def _reason(self, row, item, used, genres):
         expl = self.explainer.because_you_liked(row, item, n=1) if row.nnz else []

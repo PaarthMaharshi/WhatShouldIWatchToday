@@ -10,18 +10,18 @@ from backend.app.schemas import RatingIn
 router = APIRouter(tags=["recommendations"])
 
 
-def _recommend(request, user, model, k):
+def _recommend(request, user, model, k, offset=0):
     try:
         return request.app.state.rec.recommend(
-            db.get_ratings(user["id"]), model, k, user["genres"], user["ml_user_idx"])
+            db.get_ratings(user["id"]), model, k, user["genres"], user["ml_user_idx"], offset)
     except KeyError:
         raise HTTPException(400, f"Unknown model '{model}'. See GET /models.")
 
 
 @router.get("/recommendations/{user_id}")
 def recommendations(user_id: int, request: Request, model: str = "hybrid",
-                    k: int = Query(12, ge=1, le=50)):
-    return _recommend(request, require_user(user_id), model, k)
+                    k: int = Query(12, ge=1, le=50), offset: int = Query(0, ge=0, le=450)):
+    return _recommend(request, require_user(user_id), model, k, offset)
 
 
 @router.post("/ratings")

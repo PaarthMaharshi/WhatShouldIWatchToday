@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import EditProfile from '../components/EditProfile'
 import { api } from '../api'
@@ -13,6 +13,7 @@ import { useApp } from '../context'
 import { useAsync } from '../hooks'
 
 const TOP = 12
+const MORE_PAGE = 12
 
 /** A recommendation tile with its explanation and a quick 1-5 star rating. */
 function RecTile({ movie }) {
@@ -63,6 +64,31 @@ export default function ForYou() {
   const recs = useAsync(() => (userId ? api.recommendations(userId, model, 36) : none()), [userId, model, recsVersion])
   const rated = useAsync(() => (userId ? api.userRatings(userId) : none()), [userId, recsVersion])
   const watch = useAsync(() => (userId ? api.watchlist(userId) : none()), [userId, watchlist.size])
+
+  // "Show more picks": pages further down the same ranking, no rating needed.
+  const [more, setMore] = useState([])
+  const [moreBusy, setMoreBusy] = useState(false)
+  const [moreErr, setMoreErr] = useState(null)
+  const [moreDone, setMoreDone] = useState(false)
+  useEffect(() => {
+    setMore([])
+    setMoreErr(null)
+    setMoreDone(false)
+  }, [userId, model, recsVersion])
+  const loadMore = async () => {
+    setMoreBusy(true)
+    setMoreErr(null)
+    try {
+      const offset = (recs.data?.items.length ?? 0) + more.length
+      const page = await api.recommendations(userId, model, MORE_PAGE, offset)
+      setMore((prev) => [...prev, ...page.items])
+      if (page.items.length < MORE_PAGE) setMoreDone(true)
+    } catch (ex) {
+      setMoreErr(ex)
+    } finally {
+      setMoreBusy(false)
+    }
+  }
 
   if (!userId) {
     return (
@@ -138,6 +164,21 @@ export default function ForYou() {
           items.slice(0, TOP).map((m) => <RecTile key={m.id} movie={m} />)
         )}
       </div>
+
+      {more.length > 0 && (
+        <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
+          {more.map((m) => <RecTile key={m.id} movie={m} />)}
+        </div>
+      )}
+      {recs.data && items.length > 0 && !moreDone && (
+        <div className="mt-8 flex flex-col items-center gap-3">
+          {moreErr && <ErrorNote error={moreErr} onRetry={loadMore} />}
+          <button type="button" onClick={loadMore} disabled={moreBusy}
+            className="label-caps border border-ink px-6 py-3 text-[11px] transition hover:bg-ink hover:text-bg disabled:opacity-40">
+            {moreBusy ? 'Finding more…' : 'Show more picks'}
+          </button>
+        </div>
+      )}
 
       {groups.map((g) => (
         <Row
