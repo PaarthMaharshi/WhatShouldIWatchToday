@@ -1,0 +1,123 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { api } from './api'
+import { useStoredState } from './hooks'
+
+const AppContext = createContext(null)
+
+/** Global app state: current user, theme, chosen model, watchlist. */
+export function AppProvider({ children }) {
+  const [userId, setUserId] = useStoredState('wsiwt.userId', null)
+  // Cream ("red velvet") is the default look; "velvet night" is the dark option.
+  const [theme, setTheme] = useStoredState('wsiwt.theme.v2', 'light')
+  const [model, setModel] = useStoredState('wsiwt.model', 'hybrid')
+  // Animations default to off for people who ask their OS for reduced motion.
+  const [motionOn, setMotionOn] = useStoredState(
+    'wsiwt.motion',
+    !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+  )
+  const [user, setUser] = useState(null)
+  const [watchlist, setWatchlist] = useState(new Set())
+  // Bumped after every rating so recommendation lists refetch.
+  const [recsVersion, setRecsVersion] = useState(0)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('motion-off', !motionOn)
+  }, [motionOn])
+
+  // True when the server no longer has the saved profile, so pages can say
+  // why the visitor is signed out instead of just looking empty.
+  const [profileLost, setProfileLost] = useState(false)
+
+  // Takes the profile the server just returned (sign-up or login), so the app
+  // is signed in straight away without waiting for another request.
+  const signIn = useCallback((profile) => {
+    setProfileLost(false)
+    setUser(profile)
+    setUserId(profile.id)
+  }, [setUserId])
+
+  const signOut = useCallback(() => {
+    setProfileLost(false)
+    setUserId(null)
+  }, [setUserId])
+
+  const refreshUser = useCallback(() => {
+    if (!userId) {
+      setUser(null)
+      setWatchlist(new Set())
+      return
+    }
+    // Only forget the profile if the server says it does not exist. Network
+    // errors and cold-start 5xx responses must not sign the user out.
+    api.user(userId).then(setUser).catch((err) => {
+      if (err.status === 404) {
+        setProfileLost(true)
+        setUserId(null)
+      }
+    })
+    api.watchlist(userId).then((w) => setWatchlist(new Set(w.map((m) => m.id)))).catch(() => {})
+  }, [userId, setUserId])
+
+  useEffect(() => {
+    refreshUser()
+  }, [refreshUser])
+
+  const toggleWatch = useCallback(
+    async (movieId) => {
+      if (!userId) return false
+      const on = !watchlist.has(movieId)
+      setWatchlist((w) => {
+        const next = new Set(w)
+        on ? next.add(movieId) : next.delete(movieId)
+        return next
+      })
+      await api.setWatchlist(userId, movieId, on)
+      return true
+    },
+    [userId, watchlist],
+  )
+
+  const rate = useCallback(
+    async (movieId, rating) => {
+      const out = await api.rate(userId, movieId, rating, model)
+      setRecsVersion((v) => v + 1)
+      refreshUser()
+      return out
+    },
+    [userId, model, refreshUser],
+  )
+
+  const value = useMemo(
+    () => ({
+      user,
+      userId,
+      signIn,
+      signOut,
+      profileLost,
+      theme,
+      toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
+      model,
+      setModel,
+      motionOn,
+      toggleMotion: () => setMotionOn((m) => !m),
+      watchlist,
+      toggleWatch,
+      rate,
+      recsVersion,
+      // After editing the profile: reload it and refresh every recommendation list.
+      profileChanged: () => {
+        refreshUser()
+        setRecsVersion((v) => v + 1)
+      },
+    }),
+    [user, userId, signIn, signOut, profileLost, theme, setTheme, model, setModel, motionOn, setMotionOn,
+      watchlist, toggleWatch, rate, recsVersion, refreshUser],
+  )
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+}
+
+export const useApp = () => useContext(AppContext)
