@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Red velvet theme tokens (RGB triplets so Tailwind can apply opacity).
+   Light "cream" is the default; "velvet night" is the dark variant. */
+:root {
+  --bg: 246 239 229;          /* cream */
+  --surface: 238 228 214;     /* frosting */
+  --surface-2: 228 214 197;
+  --ink: 33 13 17;            /* near-black burgundy */
+  --muted: 112 82 82;
+  --line: 222 205 188;
+  --accent: 164 22 38;        /* red velvet */
+  --accent-dark: 122 14 28;
+  --accent-soft: 232 196 186; /* blush */
+  color-scheme: light;
+}
+.dark {
+  --bg: 24 9 12;              /* velvet night */
+  --surface: 38 15 20;
+  --surface-2: 54 22 28;
+  --ink: 246 236 224;         /* cream text */
+  --muted: 199 166 160;
+  --line: 72 34 41;
+  --accent: 214 44 62;        /* brighter crimson for contrast on dark */
+  --accent-dark: 170 26 44;
+  --accent-soft: 92 30 40;
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
+  }
+  ::selection {
+    @apply bg-accent text-bg;
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10;
+  }
+  .eyebrow {
+    @apply font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-muted;
+  }
+  /* Small uppercase editorial label (like the reference's nav and side text) */
+  .label-caps {
+    @apply font-display text-[11px] font-bold uppercase tracking-[0.18em];
+  }
+  .link-underline {
+    @apply relative inline-block pb-1 font-display text-sm font-semibold text-ink
+      after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded
+      after:bg-accent after:transition-transform hover:after:scale-x-110;
+  }
+  .chip {
+    @apply rounded-full border border-line bg-surface px-4 py-1.5 text-xs font-medium
+      text-muted transition hover:border-accent/60 hover:text-ink;
+  }
+  .chip-on {
+    @apply border-accent bg-accent text-bg hover:text-bg;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-2;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Black-and-white "ink" treatment for hero art, like the reference's line drawing */
+  .ink-art {
+    filter: grayscale(1) contrast(1.12) brightness(1.03);
+    transition: filter 0.6s ease;
+  }
+  .ink-art:hover {
+    filter: grayscale(0.15) contrast(1.05);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
