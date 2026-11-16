@@ -28,6 +28,23 @@ export function AppProvider({ children }) {
     document.documentElement.classList.toggle('motion-off', !motionOn)
   }, [motionOn])
 
+  // True when the server no longer has the saved profile, so pages can say
+  // why the visitor is signed out instead of just looking empty.
+  const [profileLost, setProfileLost] = useState(false)
+
+  // Takes the profile the server just returned (sign-up or login), so the app
+  // is signed in straight away without waiting for another request.
+  const signIn = useCallback((profile) => {
+    setProfileLost(false)
+    setUser(profile)
+    setUserId(profile.id)
+  }, [setUserId])
+
+  const signOut = useCallback(() => {
+    setProfileLost(false)
+    setUserId(null)
+  }, [setUserId])
+
   const refreshUser = useCallback(() => {
     if (!userId) {
       setUser(null)
@@ -37,7 +54,10 @@ export function AppProvider({ children }) {
     // Only forget the profile if the server says it does not exist. Network
     // errors and cold-start 5xx responses must not sign the user out.
     api.user(userId).then(setUser).catch((err) => {
-      if (err.status === 404) setUserId(null)
+      if (err.status === 404) {
+        setProfileLost(true)
+        setUserId(null)
+      }
     })
     api.watchlist(userId).then((w) => setWatchlist(new Set(w.map((m) => m.id)))).catch(() => {})
   }, [userId, setUserId])
@@ -75,8 +95,9 @@ export function AppProvider({ children }) {
     () => ({
       user,
       userId,
-      signIn: setUserId,
-      signOut: () => setUserId(null),
+      signIn,
+      signOut,
+      profileLost,
       theme,
       toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
       model,
@@ -93,7 +114,7 @@ export function AppProvider({ children }) {
         setRecsVersion((v) => v + 1)
       },
     }),
-    [user, userId, setUserId, theme, setTheme, model, setModel, motionOn, setMotionOn,
+    [user, userId, signIn, signOut, profileLost, theme, setTheme, model, setModel, motionOn, setMotionOn,
       watchlist, toggleWatch, rate, recsVersion, refreshUser],
   )
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

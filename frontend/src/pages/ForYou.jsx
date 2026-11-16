@@ -57,7 +57,7 @@ function Row({ title, children }) {
 }
 
 export default function ForYou() {
-  const { user, userId, model, recsVersion, watchlist } = useApp()
+  const { user, userId, model, recsVersion, watchlist, profileLost } = useApp()
   const [params] = useSearchParams()
   const welcome = params.get('welcome') === '1'
   const [editing, setEditing] = useState(params.get('edit') === '1')
@@ -97,9 +97,19 @@ export default function ForYou() {
         <p className="eyebrow">For you</p>
         <h1 className="mt-3 text-4xl font-bold">Your personal picks live here</h1>
         <p className="mx-auto mt-3 max-w-md text-muted">Tell us a few genres and favourite films and the recommender takes it from there.</p>
-        <Link to="/welcome" className="mt-8 inline-block rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-dark">
-          Get started
-        </Link>
+        {profileLost && (
+          <p role="alert" className="mx-auto mt-6 max-w-md border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-ink">
+            You were signed out because the server could not find your profile. Log in again, or create a new one.
+          </p>
+        )}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <Link to="/welcome" className="inline-block rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-dark">
+            Get started
+          </Link>
+          <Link to="/login" className="inline-block rounded-full border border-ink px-6 py-3 text-sm font-semibold hover:bg-ink hover:text-bg">
+            Log in
+          </Link>
+        </div>
       </section>
     )
   }

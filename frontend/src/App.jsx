@@ -12,6 +12,7 @@ import ForYou from './pages/ForYou'
 import Forum from './pages/Forum'
 import ForumPost from './pages/ForumPost'
 import Home from './pages/Home'
+import Login from './pages/Login'
 import Mood from './pages/Mood'
 import MovieDetail from './pages/MovieDetail'
 import UnderTheHood from './pages/UnderTheHood'
@@ -61,6 +62,7 @@ const ROUTES = (
   <>
     <Route path="/" element={<Home />} />
     <Route path="/welcome" element={<Welcome />} />
+    <Route path="/login" element={<Login />} />
     <Route path="/browse" element={<Browse />} />
     <Route path="/for-you" element={<ForYou />} />
     <Route path="/mood" element={<Mood />} />

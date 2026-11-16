@@ -73,7 +73,10 @@ export default function Home() {
                 <p className="mt-3 font-display text-2xl font-black uppercase leading-tight">Get recommendations made for you</p>
                 <p className="mt-2 text-sm text-muted">Pick a few genres and favourite films. It takes 30 seconds.</p>
               </div>
-              <StarButton as={Link} to="/welcome" className="self-start text-sm font-semibold">Get started</StarButton>
+              <div className="flex flex-wrap items-center gap-5">
+                <StarButton as={Link} to="/welcome" className="text-sm font-semibold">Get started</StarButton>
+                <Link to="/login" className="text-sm font-semibold text-accent hover:underline">I already have a profile</Link>
+              </div>
             </div>
           )}
           <div className={`flex flex-col justify-between gap-6 bg-accent p-8 text-bg ${userId ? 'lg:col-span-2' : ''}`}>

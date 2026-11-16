@@ -60,6 +60,7 @@ export const api = {
     post('/ratings', { user_id: userId, movie_id: movieId, rating, model }),
   unrate: (userId, movieId) => request(`/ratings/${userId}/${movieId}`, { method: 'DELETE' }),
   createUser: (body) => post('/users', body),
+  login: (username, password) => post('/users/login', { username, password }),
   demoUser: (movielensUserId) => post('/users/demo', { movielens_user_id: movielensUserId }),
   user: (id) => request(`/users/${id}`),
   updateUser: (id, body) => request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),

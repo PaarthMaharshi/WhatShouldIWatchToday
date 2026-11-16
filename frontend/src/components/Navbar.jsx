@@ -147,10 +147,13 @@ export default function Navbar() {
                 {initials}
               </button>
             ) : (
-              <Link to="/welcome" className="label-caps whitespace-nowrap bg-ink px-3 py-2 text-[10px] text-bg transition hover:bg-accent sm:px-4">
-                <span className="sm:hidden">Join</span>
-                <span className="hidden sm:inline">Get started</span>
-              </Link>
+              <span className="flex items-center gap-3 sm:gap-4">
+                <Link to="/login" className="label-caps whitespace-nowrap text-[10px] text-ink transition hover:text-accent">Log in</Link>
+                <Link to="/welcome" className="label-caps whitespace-nowrap bg-ink px-3 py-2 text-[10px] text-bg transition hover:bg-accent sm:px-4">
+                  <span className="sm:hidden">Join</span>
+                  <span className="hidden sm:inline">Get started</span>
+                </Link>
+              </span>
             )}
             {account.open && user && (
               <div className="absolute right-0 mt-2 w-60 border border-line bg-bg p-2 text-sm shadow-card">
@@ -170,10 +173,10 @@ export default function Navbar() {
                   onClick={() => {
                     signOut()
                     account.setOpen(false)
-                    navigate('/welcome')
+                    navigate('/login')
                   }}
                 >
-                  Switch user
+                  Log out
                 </button>
               </div>
             )}

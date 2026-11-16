@@ -267,3 +267,57 @@ def test_edit_profile(client):
     assert r.json()["genres"] == ["Drama", "Horror"]
     assert client.patch(f"/users/{u['id']}", json={"genres": ["Nope"]}).status_code == 422
     assert client.patch("/users/999999", json={"name": "x"}).status_code == 404
+
+
+def test_signup_with_login_then_log_in(client):
+    r = client.post("/users", json={"name": "Login Test", "username": "Login.Tester", "password": "secret-pw",
+                                    "favorite_movie_ids": [1, 364]})
+    assert r.status_code == 201
+    u = r.json()
+    CREATED.append(u["id"])
+    assert u["username"] == "login.tester" and "password_hash" not in u
+    assert "password_hash" not in client.get(f"/users/{u['id']}").json()
+
+    ok = client.post("/users/login", json={"username": " login.TESTER ", "password": "secret-pw"})
+    assert ok.status_code == 200 and ok.json()["id"] == u["id"] and "password_hash" not in ok.json()
+    assert client.post("/users/login", json={"username": "login.tester", "password": "wrong"}).status_code == 401
+    assert client.post("/users/login", json={"username": "nobody-here", "password": "secret-pw"}).status_code == 401
+
+    # Same username again (any case) is refused; half a login is refused.
+    assert client.post("/users", json={"name": "Copy", "username": "LOGIN.tester",
+                                       "password": "another-pw"}).status_code == 409
+    assert client.post("/users", json={"name": "Half", "username": "half.login"}).status_code == 422
+    assert client.post("/users", json={"name": "Short", "username": "shorty", "password": "123"}).status_code == 422
+
+
+def test_profile_without_password_cannot_log_in(client, new_user):
+    assert new_user["username"] is None
+    assert client.post("/users/login", json={"username": "Asha", "password": "anything"}).status_code == 401
+
+
+def test_focused_taste_is_followed_as_a_group(client):
+    """Five animated family favourites: picks follow what they share, not one
+    favourite's unrelated look-alikes (action films co-watched with a kids' movie)."""
+    catalog = app.state.catalog
+    by_title = {t: int(i) for i, t in catalog.movies["clean_title"].items()}
+    favs = [by_title[t] for t in ["Toy Story", "Cars", "Kung Fu Panda", "Shrek", "Monsters, Inc."]]
+    u = client.post("/users", json={"name": "Family Night", "favorite_movie_ids": favs}).json()
+    CREATED.append(u["id"])
+
+    def family_share(**params):
+        items = client.get(f"/recommendations/{u['id']}", params={"k": 24, **params}).json()["items"]
+        assert len(items) == 24
+        return sum(bool({"Animation", "Children"} & set(catalog.movies.at[m["id"], "genres_list"]))
+                   for m in items) / 24
+
+    assert family_share() >= 0.9
+    assert family_share() > family_share(taste="false")     # the raw model drifts further
+
+
+def test_consensus_is_weak_for_a_mixed_taste(client):
+    rec, catalog = app.state.rec, app.state.catalog
+    by_title = {t: int(i) for i, t in catalog.movies["clean_title"].items()}
+    focused = {by_title[t]: 5.0 for t in ["Toy Story", "Cars", "Kung Fu Panda", "Shrek", "Monsters, Inc."]}
+    mixed = {by_title[t]: 5.0 for t in ["Toy Story", "Pulp Fiction", "The Notebook", "Alien", "Airplane!"]}
+    assert rec._consensus(focused)[1] > 3 * rec._consensus(mixed)[1]
+    assert rec._consensus({by_title["Toy Story"]: 5.0}) == (None, 0.0)   # one favourite: nothing to agree on

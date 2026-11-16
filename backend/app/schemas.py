@@ -14,6 +14,14 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     genres: list[str] = []
     favorite_movie_ids: list[int] = []   # onboarding picks, stored as 5-star ratings
+    # Login details. Optional so demo/API profiles still work; set both or neither.
+    username: str | None = Field(None, min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str | None = Field(None, min_length=6, max_length=128)
+
+
+class LoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=30)
+    password: str = Field(min_length=1, max_length=128)
 
 
 class UserUpdate(BaseModel):

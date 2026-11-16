@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Artwork from '../components/Artwork'
 import { StarButton } from '../components/Motion'
@@ -18,6 +18,8 @@ export default function Welcome() {
   const { signIn } = useApp()
   const navigate = useNavigate()
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [genres, setGenres] = useState([])
   const [picks, setPicks] = useState([])
   const [q, setQ] = useState('')
@@ -28,16 +30,19 @@ export default function Welcome() {
   const genreList = useAsync(() => api.genres(), [], saved.genres)
   const movies = useAsync(() => api.movies({ q, sort: 'popular', page_size: 18 }), [q], q ? undefined : saved.welcome_movies)
 
-  const toggle = (list, setList, v) =>
-    setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
+  // Functional update, so quick clicks in a row are never lost to a stale list.
+  const toggle = (_list, setList, v, max = Infinity) =>
+    setList((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : cur.length >= max ? cur : [...cur, v]))
 
   const start = async (e) => {
     e.preventDefault()
     setBusy(true)
     setErr(null)
     try {
-      const user = await api.createUser({ name: name.trim(), genres, favorite_movie_ids: picks })
-      signIn(user.id)
+      const user = await api.createUser({
+        name: name.trim(), username: username.trim(), password, genres, favorite_movie_ids: picks,
+      })
+      signIn(user)
       navigate('/for-you?welcome=1')
     } catch (ex) {
       setErr(ex)
@@ -50,7 +55,7 @@ export default function Welcome() {
     setErr(null)
     try {
       const user = await api.demoUser(Number(demoId))
-      signIn(user.id)
+      signIn(user)
       navigate('/for-you?welcome=1')
     } catch (ex) {
       setErr(ex)
@@ -58,7 +63,8 @@ export default function Welcome() {
     }
   }
 
-  const ready = name.trim() && (genres.length > 0 || picks.length > 0)
+  const usernameOk = /^[A-Za-z0-9_.-]{3,30}$/.test(username.trim())
+  const ready = name.trim() && usernameOk && password.length >= 6 && (genres.length > 0 || picks.length > 0)
 
   return (
     <section className="container-x py-12">
@@ -68,6 +74,10 @@ export default function Welcome() {
         New here? The recommender knows nothing about you yet (the "cold start" problem). Genres alone
         are enough to start. Any favourite movies you add make the first picks sharper, and every
         movie you rate afterwards teaches the model more about your taste.
+      </p>
+      <p className="mt-3 text-sm text-muted">
+        Already have a profile?{' '}
+        <Link to="/login" className="font-semibold text-accent hover:underline">Log in</Link>
       </p>
 
       <form onSubmit={start} className="mt-10 space-y-10">
@@ -85,7 +95,45 @@ export default function Welcome() {
         </div>
 
         <fieldset>
-          <legend className="font-display text-sm font-bold uppercase tracking-[0.2em]">2. Favourite genres</legend>
+          <legend className="font-display text-sm font-bold uppercase tracking-[0.2em]">
+            2. Your login{' '}
+            <span className="ml-2 font-sans text-xs normal-case tracking-normal text-muted">So you can come back to your picks on any device</span>
+          </legend>
+          <div className="mt-3 grid max-w-2xl gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="username" className="text-xs text-muted">Username (3-30 letters, numbers, . _ -)</label>
+              <input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={30}
+                required
+                aria-invalid={username !== '' && !usernameOk}
+                className="mt-1 block w-full rounded-lg border border-line bg-surface px-4 py-2.5 outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="text-xs text-muted">Password (6 characters or more)</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
+                maxLength={128}
+                required
+                className="mt-1 block w-full rounded-lg border border-line bg-surface px-4 py-2.5 outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend className="font-display text-sm font-bold uppercase tracking-[0.2em]">3. Favourite genres</legend>
           <div className="mt-3 flex flex-wrap gap-2">
             {genreList.data?.map((g) => (
               <button
@@ -104,7 +152,7 @@ export default function Welcome() {
 
         <fieldset>
           <legend className="font-display text-sm font-bold uppercase tracking-[0.2em]">
-            3. Favourite movies{' '}
+            4. Favourite movies{' '}
             <span className="ml-2 font-sans text-xs normal-case tracking-normal text-muted">
               Optional · {picks.length ? `${picks.length} chosen, ` : ''}up to {TARGET_PICKS}
             </span>
@@ -130,7 +178,7 @@ export default function Welcome() {
                       type="button"
                       aria-pressed={on}
                       disabled={full}
-                      onClick={() => toggle(picks, setPicks, m.id)}
+                      onClick={() => toggle(picks, setPicks, m.id, TARGET_PICKS)}
                       className={`group relative overflow-hidden rounded-lg text-left transition disabled:opacity-40 ${on ? 'ring-4 ring-accent' : ''}`}
                     >
                       <Artwork movie={m} className="aspect-[2/3]" />

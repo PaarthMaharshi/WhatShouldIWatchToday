@@ -109,6 +109,20 @@ def _run(con, query, params=()):
     return con.execute(_sql(query), params)
 
 
+def _migrate(con):
+    """Add the login columns to a users table created before accounts existed."""
+    if IS_POSTGRES:
+        con.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT")
+        con.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT")
+    else:
+        have = {r["name"] for r in con.execute("PRAGMA table_info(users)").fetchall()}
+        for col in ("username", "password_hash"):
+            if col not in have:
+                con.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+    # Usernames are stored lower-case; profiles without a login keep NULL.
+    con.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (username)")
+
+
 def init_db():
     if not IS_POSTGRES:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -117,25 +131,44 @@ def init_db():
             con.execute(SCHEMA)
         else:
             con.executescript(SCHEMA)
+        _migrate(con)
 
 
-def create_user(name, genres=(), ml_user_idx=None) -> int:
+def create_user(name, genres=(), ml_user_idx=None, username=None, password_hash=None) -> int:
     with connect() as con:
         row = _run(con,
-                   "INSERT INTO users (name, genres, ml_user_idx, created_at) "
-                   "VALUES (?, ?, ?, ?) RETURNING id",
-                   (name, json.dumps(list(genres)), ml_user_idx, time.time())).fetchone()
+                   "INSERT INTO users (name, genres, ml_user_idx, created_at, username, password_hash) "
+                   "VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+                   (name, json.dumps(list(genres)), ml_user_idx, time.time(),
+                    username, password_hash)).fetchone()
         return row["id"]
+
+
+def _public(row):
+    """A users row as the API returns it: never includes the password hash."""
+    user = dict(row)
+    user.pop("password_hash", None)
+    user["genres"] = json.loads(user["genres"])
+    return user
 
 
 def get_user(user_id):
     with connect() as con:
         row = _run(con, "SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    if row is None:
-        return None
-    user = dict(row)
-    user["genres"] = json.loads(user["genres"])
-    return user
+    return None if row is None else _public(row)
+
+
+def username_taken(username) -> bool:
+    with connect() as con:
+        return _run(con, "SELECT 1 FROM users WHERE username = ?", (username,)).fetchone() is not None
+
+
+def get_login(username):
+    """(user id, password hash) for a username, or None."""
+    with connect() as con:
+        row = _run(con, "SELECT id, password_hash FROM users WHERE username = ?",
+                   (username,)).fetchone()
+    return None if row is None else (row["id"], row["password_hash"])
 
 
 def update_user(user_id, name=None, genres=None):

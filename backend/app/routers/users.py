@@ -1,10 +1,32 @@
 """App users: onboarding, demo accounts, rating history, watchlist."""
+import hashlib
+import hmac
+import os
+
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.app import db
-from backend.app.schemas import DemoUserCreate, UserCreate, UserUpdate, WatchlistIn
+from backend.app.schemas import DemoUserCreate, LoginIn, UserCreate, UserUpdate, WatchlistIn
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+_PBKDF2_ROUNDS = 200_000
+
+
+def hash_password(password: str) -> str:
+    """Salted PBKDF2-SHA256, stored as "pbkdf2$rounds$salt$hash" (hex)."""
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ROUNDS)
+    return f"pbkdf2${_PBKDF2_ROUNDS}${salt.hex()}${digest.hex()}"
+
+
+def check_password(password: str, stored: str | None) -> bool:
+    try:
+        _, rounds, salt, digest = stored.split("$")
+        got = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(rounds))
+        return hmac.compare_digest(got.hex(), digest)
+    except (AttributeError, ValueError):
+        return False            # profile has no password (demo user) or a malformed hash
 
 
 def require_user(user_id):
@@ -21,10 +43,25 @@ def create_user(body: UserCreate, request: Request):
     bad = [g for g in body.genres if g not in catalog.genres]
     if bad:
         raise HTTPException(422, f"Unknown genres: {bad}")
-    uid = db.create_user(body.name, body.genres)
+    if (body.username is None) != (body.password is None):
+        raise HTTPException(422, "Send both a username and a password, or neither.")
+    username = body.username.lower() if body.username else None
+    if username and db.username_taken(username):
+        raise HTTPException(409, "That username is taken. Pick another, or log in instead.")
+    uid = db.create_user(body.name, body.genres, username=username,
+                         password_hash=hash_password(body.password) if body.password else None)
     favs = [m for m in body.favorite_movie_ids if catalog.exists(m)]
     db.upsert_ratings(uid, [(m, 5.0) for m in favs])
-    return db.get_user(uid)
+    return get_user(uid)
+
+
+@router.post("/login")
+def login(body: LoginIn):
+    """Check a username and password and return the profile."""
+    found = db.get_login(body.username.strip().lower())
+    if found is None or not check_password(body.password, found[1]):
+        raise HTTPException(401, "Wrong username or password.")
+    return get_user(found[0])
 
 
 @router.post("/demo", status_code=201)

@@ -19,6 +19,9 @@ ART = Path(__file__).resolve().parents[3] / "artifacts"
 MIN_RATINGS = 5        # below this a user is "cold" and gets the cold-start model
 TASTE_WEIGHT = 1.0     # strength of the genre-taste re-rank (in model-score std units)
 PERSON_SHORTLIST = 300  # how many top candidates to check against TMDB cast/crew
+CONSENSUS_WEIGHT = float(os.getenv("CONSENSUS_WEIGHT", 1.5))    # max pull towards the shared taste (score std units)
+CONSENSUS_FULL_AT = float(os.getenv("CONSENSUS_FULL_AT", 0.3))  # coherence at which the pull reaches full strength
+CONSENSUS_MAX_LIKES = 60    # newest liked movies that define the shared taste
 
 # key -> (label in results.csv / UI, family, one-line description)
 MODELS = {
@@ -160,6 +163,46 @@ class RecommenderService:
         z[ok] += weight * aff[ok] / (np.abs(aff).max() + 1e-9)
         return z
 
+    def _consensus(self, ratings: dict):
+        """How well each movie fits ALL of the user's liked movies together.
+
+        Returns (support, coherence). support[i] is the average content
+        similarity (genres + tags + plot) between movie i and every liked
+        movie, so a film that resembles only one favourite scores low, while
+        one that resembles most of them scores high. coherence (0-1) says how
+        alike the liked movies are to each other: near 1 for a focused taste
+        (all animated family films), near 0 for a mixed one.
+        """
+        liked = [self.index[m] for m, r in ratings.items() if r >= 4 and m in self.index]
+        liked = liked[:CONSENSUS_MAX_LIKES]                # ratings come newest first
+        if len(liked) < 2:
+            return None, 0.0
+        X = self.models["content"].X
+        scale = getattr(self.models["content"], "max_sim", 1.0)
+        sims = (X @ X[liked].T).toarray() / scale          # items x liked
+        support = sims.mean(axis=1)
+        among = sims[liked]                                # liked x liked
+        n = len(liked)
+        coherence = float((among.sum() - np.trace(among)) / (n * (n - 1)))
+        return support.astype(np.float32), max(0.0, min(1.0, coherence))
+
+    def _consensus_rerank(self, rank, ratings):
+        """Pull the ranking towards movies that match the user's favourites as a
+        group. The pull grows with how focused the taste is, so a varied taste
+        keeps its variety and a focused one is not derailed by one favourite's
+        look-alikes (e.g. action films co-watched with a single kids' movie)."""
+        support, coherence = self._consensus(ratings)
+        ok = np.isfinite(rank)
+        if support is None or ok.sum() < 2:
+            return rank
+        weight = CONSENSUS_WEIGHT * min(1.0, coherence / CONSENSUS_FULL_AT)
+        z = np.full_like(rank, -np.inf)
+        r = rank[ok]
+        z[ok] = (r - r.mean()) / (r.std() + 1e-9)
+        s = support[ok]
+        z[ok] += weight * (s - s.mean()) / (s.std() + 1e-9)
+        return z
+
     def _person_match(self, person, candidates):
         """Items whose tags/title mention `person`, plus (with TMDB data) items
         whose cast or director include them."""
@@ -224,6 +267,7 @@ class RecommenderService:
 
         profile = self.taste_profile(ratings, genres)
         if taste and model != "popularity":
+            rank = self._consensus_rerank(rank, ratings)
             rank = self._interest_rerank(rank, profile)
         rank[row.indices] = -np.inf                        # never re-recommend
         rank = self._apply_filters(rank, genre, year_from, year_to, person)
