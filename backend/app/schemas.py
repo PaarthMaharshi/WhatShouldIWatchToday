@@ -1,0 +1,75 @@
+"""Request bodies (responses are plain dicts documented in the README)."""
+from pydantic import BaseModel, Field
+
+
+class RatingIn(BaseModel):
+    user_id: int
+    movie_id: int
+    rating: float = Field(ge=0.5, le=5.0, multiple_of=0.5)
+    model: str = "hybrid"          # which model to use for the refreshed recs
+    k: int = Field(12, ge=1, le=50)
+
+
+class UserCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    genres: list[str] = []
+    favorite_movie_ids: list[int] = []   # onboarding picks, stored as 5-star ratings
+    # Login details. Optional so demo/API profiles still work; set both or neither.
+    username: str | None = Field(None, min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str | None = Field(None, min_length=6, max_length=128)
+
+
+class LoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=30)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class UserUpdate(BaseModel):
+    """Edit a profile. Fields left out stay as they are."""
+    name: str | None = Field(None, min_length=1, max_length=40)
+    genres: list[str] | None = None
+    favorite_movie_ids: list[int] | None = Field(None, max_length=2000)   # the full set of 5-star favourites
+
+
+class DemoUserCreate(BaseModel):
+    movielens_user_id: int
+
+
+class MoodIn(BaseModel):
+    mood: str = "happy"
+    genres: list[str] = []
+    company: str = "solo"
+    era: str = "any"
+    runtime: str = "any"
+    discovery: str = "balanced"
+    text: str = Field("", max_length=120)
+    user_id: int | None = None
+    k: int = Field(12, ge=1, le=30)
+    exclude: list[int] = Field(default_factory=list, max_length=300)   # ids already shown
+    seed: int | None = None                                            # varies the picks
+
+
+class PostIn(BaseModel):
+    user_id: int
+    title: str = Field(min_length=3, max_length=150)
+    body: str = Field("", max_length=5000)
+    flair: str = "discussion"
+    movie_id: int | None = None
+
+
+class CommentIn(BaseModel):
+    user_id: int
+    body: str = Field(min_length=1, max_length=3000)
+    parent_id: int | None = None
+
+
+class VoteIn(BaseModel):
+    user_id: int
+    target_type: str = Field(pattern="^(post|comment)$")
+    target_id: int
+    value: int = Field(ge=-1, le=1)
+
+
+class WatchlistIn(BaseModel):
+    movie_id: int
+    on: bool = True
