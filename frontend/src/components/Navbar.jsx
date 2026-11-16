@@ -101,7 +101,9 @@ export default function Navbar() {
           </button>
         </div>
 
-        <ul className="hidden min-w-0 items-center gap-7 xl:flex">
+        {/* The page is at most 1280px wide, so this row has ~1190px at every desktop
+            size: gap-5 keeps all six links clear of the buttons on the right. */}
+        <ul className="hidden shrink-0 items-center gap-5 xl:flex">
           {LINKS.map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>
@@ -110,9 +112,9 @@ export default function Navbar() {
         </ul>
 
         <div className="flex shrink-0 items-center gap-3 sm:gap-5">
-          {/* Signed out, "Log in" + "Get started" need the room: the toggles step
-              aside (they are also in the menu) wherever the header would be too full. */}
-          <span className={`hidden items-center gap-4 ${user ? 'sm:flex' : 'md:flex xl:hidden min-[1360px]:flex'}`}>
+          {/* Signed out, "Log in" + "Sign up" need the room on small screens, so the
+              toggles step aside there (they are also in the menu). */}
+          <span className={`hidden items-center gap-4 ${user ? 'sm:flex' : 'md:flex'}`}>
             <TextToggle on={motionOn} onClick={toggleMotion} label="Toggle animations" onText="FX on" offText="FX off" />
             <TextToggle on={theme === 'dark'} onClick={toggleTheme}
               label={`Switch to ${theme === 'dark' ? 'cream' : 'night'} theme`} onText="Night" offText="Day" />
@@ -153,7 +155,7 @@ export default function Navbar() {
                 <Link to="/login" className="label-caps hidden whitespace-nowrap text-[10px] text-ink transition hover:text-accent min-[420px]:inline">Log in</Link>
                 <Link to="/welcome" className="label-caps whitespace-nowrap bg-ink px-3 py-2 text-[10px] text-bg transition hover:bg-accent sm:px-4">
                   <span className="sm:hidden">Join</span>
-                  <span className="hidden sm:inline">Get started</span>
+                  <span className="hidden sm:inline">Sign up</span>
                 </Link>
               </span>
             )}
