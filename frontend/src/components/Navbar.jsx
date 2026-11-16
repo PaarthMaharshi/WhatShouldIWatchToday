@@ -101,7 +101,7 @@ export default function Navbar() {
           </button>
         </div>
 
-        <ul className="hidden min-w-0 items-center gap-7 2xl:flex">
+        <ul className="hidden min-w-0 items-center gap-7 xl:flex">
           {LINKS.map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} className={linkClass}>{l.label}</NavLink>

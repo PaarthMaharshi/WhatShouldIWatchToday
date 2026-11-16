@@ -90,7 +90,7 @@ export default function Greats() {
               <span className="font-display font-semibold">{genreLine(movie, 1)}</span>
               <span className="font-display font-bold">{toTen(movie.rating)}</span>
             </div>
-            <Link to={`/movie/${movie.id}`} className="link-underline mt-6">Watch Now</Link>
+            <Link to={`/movie/${movie.id}`} className="link-underline mt-6">View details</Link>
           </article>
         )}
       </div>

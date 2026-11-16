@@ -65,8 +65,9 @@ export default function Welcome() {
       <p className="eyebrow">Welcome</p>
       <h1 className="mt-2 text-4xl font-bold">Tell us what you love</h1>
       <p className="mt-3 max-w-xl text-sm text-muted">
-        New here? The recommender knows nothing about you yet (the "cold start" problem). Pick a few
-        genres and up to {TARGET_PICKS} favourite movies and we will find your taste segment.
+        New here? The recommender knows nothing about you yet (the "cold start" problem). Genres alone
+        are enough to start. Any favourite movies you add make the first picks sharper, and every
+        movie you rate afterwards teaches the model more about your taste.
       </p>
 
       <form onSubmit={start} className="mt-10 space-y-10">
@@ -103,7 +104,10 @@ export default function Welcome() {
 
         <fieldset>
           <legend className="font-display text-sm font-bold uppercase tracking-[0.2em]">
-            3. Favourite movies <span className="ml-2 font-sans text-xs normal-case tracking-normal text-muted">{picks.length}/{TARGET_PICKS} chosen</span>
+            3. Favourite movies{' '}
+            <span className="ml-2 font-sans text-xs normal-case tracking-normal text-muted">
+              Optional · {picks.length ? `${picks.length} chosen, ` : ''}up to {TARGET_PICKS}
+            </span>
           </legend>
           <label htmlFor="pick-search" className="sr-only">Search movies to pick</label>
           <input

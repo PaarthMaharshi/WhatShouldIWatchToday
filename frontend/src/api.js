@@ -11,10 +11,25 @@ function qs(params = {}) {
 }
 
 async function request(path, options = {}) {
-  const res = await fetch(BASE + path, {
+  const send = () => fetch(BASE + path, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
+  let res
+  try {
+    res = await send()
+  } catch {
+    // Network-level failure (often a serverless API still waking up): retry once.
+    await new Promise((r) => setTimeout(r, 1500))
+    try {
+      res = await send()
+    } catch {
+      throw new Error('Could not reach the server. It may be waking up, please try again in a few seconds.')
+    }
+  }
+  if (res.status === 504 && (!options.method || options.method === 'GET')) {
+    res = await send()                     // timed out while loading models: try again
+  }
   if (!res.ok) {
     let detail
     try {
@@ -38,8 +53,9 @@ export const api = {
   movies: (params) => request('/movies' + qs(params)),
   movie: (id, userId) => request(`/movies/${id}` + qs({ user_id: userId })),
   trending: (k = 20, userId) => request('/trending' + qs({ k, user_id: userId })),
-  recommendations: (userId, model = 'hybrid', k = 12) =>
-    request(`/recommendations/${userId}` + qs({ model, k })),
+  // filters: { genre, year_from, year_to, person } narrow the user's own ranking.
+  recommendations: (userId, model = 'hybrid', k = 12, offset = 0, filters = {}) =>
+    request(`/recommendations/${userId}` + qs({ model, k, offset: offset || undefined, ...filters })),
   rate: (userId, movieId, rating, model = 'hybrid') =>
     post('/ratings', { user_id: userId, movie_id: movieId, rating, model }),
   unrate: (userId, movieId) => request(`/ratings/${userId}/${movieId}`, { method: 'DELETE' }),

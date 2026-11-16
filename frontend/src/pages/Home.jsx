@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import Explore from '../components/Explore'
 import Favorites from '../components/home/Favorites'
 import Greats from '../components/home/Greats'
 import Hero from '../components/home/Hero'
@@ -18,6 +19,25 @@ const MOOD_SHORTCUTS = [
 
 const MARQUEE = ['Drama', 'Comedy', 'Thriller', 'Romance', 'Sci-Fi', 'Animation', 'Crime', 'Horror', 'Adventure', 'Mystery']
 
+/** "More <genre> for you": the user's own ranking inside one of their top genres. */
+function TasteRow({ genre, skip = [] }) {
+  const { userId, model, recsVersion } = useApp()
+  const res = useAsync(() => api.recommendations(userId, model, 30, 0, { genre }), [userId, model, recsVersion, genre])
+  // Leave out movies the rows above already show, so every row brings something new.
+  const data = res.data && { ...res.data, items: res.data.items.filter((m) => !skip.includes(m.id)).slice(0, 12) }
+  if (!res.loading && !res.error && !data?.items.length) return null
+  return (
+    <PicksRow
+      title={`More ${genre} for you`}
+      subtitle={`${genre} is one of your top genres, so here is the best of it for your taste.`}
+      data={data}
+      loading={res.loading}
+      error={res.error}
+      onRetry={res.reload}
+    />
+  )
+}
+
 /**
  * Home: editorial hero (the selected model's top picks for signed-in users,
  * trending films otherwise), a scroll-speed genre marquee, then sections that
@@ -35,6 +55,7 @@ export default function Home() {
   )
 
   const label = recs.data?.label
+  const taste = recs.data?.taste ?? []
   return (
     <>
       <Hero items={recs.data?.items.slice(0, 5)} loading={recs.loading} eyebrow={userId ? 'Top pick for you' : 'Trending this week'} />
@@ -76,11 +97,11 @@ export default function Home() {
 
       <Reveal>
         <PicksRow
-          title={userId ? 'Top picks for you' : 'Trending this season'}
+          title={userId ? 'Top picks for you' : 'Trending with MovieLens viewers'}
           subtitle={
             userId
-              ? `Chosen by the ${label ?? '...'} model. Rate movies and this row updates instantly.`
-              : 'Most-liked movies in the last three years of MovieLens ratings.'
+              ? `Built from your saved favourites and ratings${taste.length ? ` (you like ${taste.join(', ')})` : ''} by the ${label ?? '...'} model. Rate movies and this row updates instantly.`
+              : 'The movies MovieLens viewers rated highest most recently, whatever year they came out.'
           }
           data={recs.data}
           loading={recs.loading}
@@ -88,7 +109,10 @@ export default function Home() {
           onRetry={recs.reload}
         />
       </Reveal>
-      <Reveal><Favorites /></Reveal>
+      {userId && taste.slice(0, 2).map((g) => (
+        <Reveal key={g}><TasteRow genre={g} skip={(recs.data?.items ?? []).map((m) => m.id)} /></Reveal>
+      ))}
+      <Reveal>{userId ? <Explore /> : <Favorites />}</Reveal>
       <Reveal><Greats /></Reveal>
     </>
   )
