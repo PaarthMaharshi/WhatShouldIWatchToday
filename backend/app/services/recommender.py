@@ -120,6 +120,8 @@ class RecommenderService:
 
     def _match(self, scores):
         """Map the list's scores to a 60-99% "match" relative to the user's top 50."""
+        if len(scores) == 0:                       # nothing matched the filters
+            return scores
         lo, hi = scores.min(), scores.max()
         if not np.isfinite(lo) or hi - lo < 1e-9:
             return np.full(len(scores), 90.0)
@@ -204,19 +206,20 @@ class RecommenderService:
         return z
 
     def _person_match(self, person, candidates):
-        """Items whose tags/title mention `person`, plus (with TMDB data) items
-        whose cast or director include them."""
+        """Items whose tags/title mention `person`, plus items whose cast or
+        director include them.
+
+        Cast comes from TMDB. Every movie whose details are already saved is
+        checked; details that are missing are looked up live only for the
+        user's top candidates, to keep the search fast.
+        """
         q = person.lower().strip()
         hits = {i for i in candidates if q in self.item_text[i]}
+        ids = [int(self.item_ids[i]) for i in candidates]
         if os.getenv("TMDB_API_KEY"):
-            short = [i for i in candidates[:PERSON_SHORTLIST] if i not in hits]
-            self.catalog.ensure_meta([int(self.item_ids[i]) for i in short])
-            for i in short:
-                meta = self.catalog.meta(int(self.item_ids[i]))
-                names = [c.get("name", "") if isinstance(c, dict) else str(c)
-                         for c in meta.get("cast", []) + meta.get("director", [])]
-                if any(q in n.lower() for n in names):
-                    hits.add(i)
+            self.catalog.ensure_meta(ids[:PERSON_SHORTLIST])
+        self.catalog.load_saved_meta(ids)
+        hits.update(i for i, m in zip(candidates, ids) if q in self.catalog.people(m))
         return hits
 
     def _apply_filters(self, rank, genre=None, year_from=None, year_to=None, person=None):

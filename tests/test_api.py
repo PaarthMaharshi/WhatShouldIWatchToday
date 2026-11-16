@@ -321,3 +321,25 @@ def test_consensus_is_weak_for_a_mixed_taste(client):
     mixed = {by_title[t]: 5.0 for t in ["Toy Story", "Pulp Fiction", "The Notebook", "Alien", "Airplane!"]}
     assert rec._consensus(focused)[1] > 3 * rec._consensus(mixed)[1]
     assert rec._consensus({by_title["Toy Story"]: 5.0}) == (None, 0.0)   # one favourite: nothing to agree on
+
+
+def test_person_filter_checks_every_movie_with_known_cast(client, new_user):
+    """A film far down the user's ranking is still found by its cast, and a
+    search that matches nothing returns an empty list instead of an error."""
+    catalog = app.state.catalog
+    uid = new_user["id"]
+    ranked = client.get(f"/recommendations/{uid}", params={"k": 50, "offset": 400}).json()["items"]
+    far = ranked[-1]["id"]                                   # around rank 450: outside the live-lookup shortlist
+    old = catalog._meta.get(far)
+    catalog._meta[far] = {"cast": [{"name": "Zelda Testperson"}], "director": ["Quentin Unittest"]}
+    try:
+        for q in ("zelda testperson", "Quentin Unittest"):
+            r = client.get(f"/recommendations/{uid}", params={"person": q, "k": 50})
+            assert r.status_code == 200 and [m["id"] for m in r.json()["items"]] == [far]
+        none = client.get(f"/recommendations/{uid}", params={"person": "nobody by this name"})
+        assert none.status_code == 200 and none.json()["items"] == []
+    finally:
+        if old is None:
+            catalog._meta.pop(far, None)
+        else:
+            catalog._meta[far] = old

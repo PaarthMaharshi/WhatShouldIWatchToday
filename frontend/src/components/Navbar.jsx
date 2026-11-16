@@ -110,7 +110,9 @@ export default function Navbar() {
         </ul>
 
         <div className="flex shrink-0 items-center gap-3 sm:gap-5">
-          <span className="hidden items-center gap-4 sm:flex">
+          {/* Signed out, "Log in" + "Get started" need the room: the toggles step
+              aside (they are also in the menu) wherever the header would be too full. */}
+          <span className={`hidden items-center gap-4 ${user ? 'sm:flex' : 'md:flex xl:hidden min-[1360px]:flex'}`}>
             <TextToggle on={motionOn} onClick={toggleMotion} label="Toggle animations" onText="FX on" offText="FX off" />
             <TextToggle on={theme === 'dark'} onClick={toggleTheme}
               label={`Switch to ${theme === 'dark' ? 'cream' : 'night'} theme`} onText="Night" offText="Day" />
@@ -148,7 +150,7 @@ export default function Navbar() {
               </button>
             ) : (
               <span className="flex items-center gap-3 sm:gap-4">
-                <Link to="/login" className="label-caps whitespace-nowrap text-[10px] text-ink transition hover:text-accent">Log in</Link>
+                <Link to="/login" className="label-caps hidden whitespace-nowrap text-[10px] text-ink transition hover:text-accent min-[420px]:inline">Log in</Link>
                 <Link to="/welcome" className="label-caps whitespace-nowrap bg-ink px-3 py-2 text-[10px] text-bg transition hover:bg-accent sm:px-4">
                   <span className="sm:hidden">Join</span>
                   <span className="hidden sm:inline">Get started</span>
@@ -230,6 +232,11 @@ export default function Navbar() {
                   </motion.li>
                 ))}
               </ul>
+              {!user && (
+                <Link to="/login" className="label-caps mt-10 self-start border border-ink px-4 py-2 text-[11px] transition hover:bg-ink hover:text-bg">
+                  Log in
+                </Link>
+              )}
               <div className="mt-auto flex gap-6 border-t border-line pt-6">
                 <TextToggle on={motionOn} onClick={toggleMotion} label="Toggle animations" onText="FX on" offText="FX off" />
                 <TextToggle on={theme === 'dark'} onClick={toggleTheme}

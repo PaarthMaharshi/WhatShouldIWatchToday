@@ -1,5 +1,6 @@
 """Movie catalogue: MovieLens metadata, rating stats and cached TMDB details."""
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -45,6 +46,7 @@ class Catalog:
         self.movies = movies
         self.genres = sorted({g for gl in movies["genres_list"] for g in gl})
         self._meta = {}
+        self._saved_lock = threading.Lock()
         self._offline_until = 0.0
 
     # --- TMDB --------------------------------------------------------------
@@ -69,6 +71,42 @@ class Catalog:
             with ThreadPoolExecutor(8) as ex:
                 for m, v in zip(missing, ex.map(self._fetch_meta, missing)):
                     self._meta[m] = v
+
+    def load_saved_meta(self, movie_ids):
+        """Load TMDB entries that are already saved on disk (never the network),
+        so searches can use every movie whose details were fetched before."""
+        try:
+            on_disk = {f[:-5] for f in os.listdir(tmdb.CACHE) if f.endswith(".json")}
+        except OSError:
+            return                                   # no cache folder yet
+        tmdb_ids = self.movies["tmdb_id"]
+
+        def saved(m):
+            tid = tmdb_ids.get(m)
+            return tid is not None and not pd.isna(tid) and str(int(tid)) in on_disk
+
+        # One loader at a time: the start-up warm-up and a search may overlap.
+        with self._saved_lock:
+            todo = [m for m in movie_ids if not self._meta.get(m) and saved(m)]
+            if todo:
+                def load(m):
+                    return tmdb.simplify(tmdb.fetch(int(tmdb_ids[m])))
+                with ThreadPoolExecutor(8) as ex:
+                    for m, v in zip(todo, ex.map(load, todo)):
+                        self._meta[m] = v
+
+    def warm_saved_meta(self):
+        """Read every saved TMDB entry in the background, so the first actor or
+        director search does not wait for thousands of files."""
+        threading.Thread(target=self.load_saved_meta, args=(list(self.movies.index),),
+                         daemon=True, name="tmdb-warm").start()
+
+    def people(self, movie_id) -> str:
+        """Lower-case cast and director names, if this movie's details are loaded."""
+        meta = self._meta.get(movie_id) or {}
+        names = [c.get("name", "") if isinstance(c, dict) else str(c)
+                 for c in meta.get("cast", []) + meta.get("director", [])]
+        return " | ".join(names).lower()
 
     # --- Serialisation -------------------------------------------------------
     def exists(self, movie_id) -> bool:

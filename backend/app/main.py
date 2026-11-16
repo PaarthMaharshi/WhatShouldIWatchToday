@@ -46,6 +46,7 @@ def init_state(app: FastAPI):
         app.state.catalog = catalog
         app.state.rec = RecommenderService(catalog)
         app.state.plots_dir = PLOTS
+        catalog.warm_saved_meta()
 
 
 @asynccontextmanager
