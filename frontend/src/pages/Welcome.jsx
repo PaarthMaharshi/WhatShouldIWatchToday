@@ -123,6 +123,7 @@ export default function Welcome() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
+                aria-invalid={password !== '' && password.length < 6}
                 minLength={6}
                 maxLength={128}
                 required
@@ -193,6 +194,18 @@ export default function Welcome() {
         </fieldset>
 
         {err && <p role="alert" className="text-sm text-accent">{err.message}</p>}
+
+        {!ready && (
+          <p className="text-sm text-muted">
+            To continue:{' '}
+            {[
+              !name.trim() && 'enter your name',
+              !usernameOk && 'choose a username (3-30 letters, numbers, . _ -)',
+              password.length < 6 && `use a password of at least 6 characters (${password.length} so far)`,
+              genres.length === 0 && picks.length === 0 && 'pick at least one genre or movie',
+            ].filter(Boolean).join(', ')}.
+          </p>
+        )}
 
         <StarButton
           type="submit"

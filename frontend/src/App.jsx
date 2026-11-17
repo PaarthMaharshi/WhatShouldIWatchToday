@@ -15,7 +15,9 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Mood from './pages/Mood'
 import MovieDetail from './pages/MovieDetail'
+import Profile from './pages/Profile'
 import UnderTheHood from './pages/UnderTheHood'
+import Watchlist from './pages/Watchlist'
 import Welcome from './pages/Welcome'
 
 function ScrollToTop() {
@@ -65,6 +67,8 @@ const ROUTES = (
     <Route path="/login" element={<Login />} />
     <Route path="/browse" element={<Browse />} />
     <Route path="/for-you" element={<ForYou />} />
+    <Route path="/profile" element={<Profile />} />
+    <Route path="/watchlist" element={<Watchlist />} />
     <Route path="/mood" element={<Mood />} />
     <Route path="/forum" element={<Forum />} />
     <Route path="/forum/:id" element={<ForumPost />} />

@@ -168,7 +168,10 @@ export default function Navbar() {
                 <Link to="/for-you" className="block px-3 py-2 hover:bg-surface" onClick={() => account.setOpen(false)}>
                   My recommendations
                 </Link>
-                <Link to="/for-you?edit=1" className="block px-3 py-2 hover:bg-surface" onClick={() => account.setOpen(false)}>
+                <Link to="/watchlist" className="block px-3 py-2 hover:bg-surface" onClick={() => account.setOpen(false)}>
+                  My watchlist
+                </Link>
+                <Link to="/profile" className="block px-3 py-2 hover:bg-surface" onClick={() => account.setOpen(false)}>
                   Edit profile
                 </Link>
                 <button
